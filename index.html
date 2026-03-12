@@ -365,6 +365,68 @@
             font-weight: 700;
         }
 
+        /* Substitution UI */
+        .sub-court-player {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 3px 3px 0 0;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            font-family: var(--mono);
+            color: var(--text-dim);
+            transition: all 0.15s;
+        }
+
+        .sub-court-player:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .sub-out-selected {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: var(--red) !important;
+            color: var(--red) !important;
+            font-weight: 700;
+        }
+
+        .sub-bench-player {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 3px 3px 0 0;
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid var(--green);
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            font-family: var(--mono);
+            color: var(--green);
+            transition: all 0.15s;
+        }
+
+        .sub-bench-player:hover {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .sub-bench-player.inactive {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .sub-hint {
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            margin: 4px 0;
+            font-style: italic;
+        }
+
+        .sub-hint.active-hint {
+            color: var(--yellow);
+        }
+
         /* Buttons */
         .btn-primary {
             padding: 10px 20px;
@@ -1117,11 +1179,19 @@
                 }
                 var html = buildMatchCardHTML(matchId, s.team1Index, s.team2Index, false);
                 tDiv.insertAdjacentHTML("beforeend", html);
+
+                // Ensure per-match active rosters exist (already set if coming from Firebase)
+                ensureActivePlayers(matchId);
+
                 renderRotation(matchId, "A");
                 renderRotation(matchId, "B");
                 refreshScoreUI(matchId);
                 highlightServerButton(matchId);
                 renderServiceLogTable(matchId);
+
+                // Render substitution panels (scorer-interactive)
+                updateSubUI(matchId, "A");
+                updateSubUI(matchId, "B");
 
                 // Re-render sub logs
                 var m = matchData[matchId];
@@ -1129,7 +1199,9 @@
                     var logDiv = document.getElementById("subLog_" + matchId + "_A");
                     if (logDiv) {
                         var entry = document.createElement("div");
-                        entry.textContent = "• " + sub.player + " at " + sub.time;
+                        entry.textContent = sub.playerOut
+                            ? "• " + sub.playerOut + " ⇄ " + sub.playerIn + "  (" + sub.time + ")"
+                            : "• " + sub.player + " at " + sub.time;
                         logDiv.appendChild(entry);
                     }
                 });
@@ -1137,7 +1209,9 @@
                     var logDiv = document.getElementById("subLog_" + matchId + "_B");
                     if (logDiv) {
                         var entry = document.createElement("div");
-                        entry.textContent = "• " + sub.player + " at " + sub.time;
+                        entry.textContent = sub.playerOut
+                            ? "• " + sub.playerOut + " ⇄ " + sub.playerIn + "  (" + sub.time + ")"
+                            : "• " + sub.player + " at " + sub.time;
                         logDiv.appendChild(entry);
                     }
                 });
@@ -1269,8 +1343,31 @@
                 rallyCounter: 0,
                 serviceLog: [],
                 subsA: [],
-                subsB: []
+                subsB: [],
+                // Per-match active roster (modified by substitutions)
+                activePlayersA: null,
+                activePlayersB: null,
+                availableSubsA: null,
+                availableSubsB: null,
+                // Which court-player index is pending sub-out (-1 = none)
+                pendingSubA: -1,
+                pendingSubB: -1
             };
+        }
+
+        // Ensure per-match rosters are initialized (call before using activePlayers)
+        function ensureActivePlayers(matchId) {
+            var m = matchData[matchId]; if (!m) return;
+            if (!m.activePlayersA) {
+                m.activePlayersA = (teams[m.team1Index].players || []).slice();
+                m.availableSubsA = (teams[m.team1Index].subs || []).slice();
+            }
+            if (!m.activePlayersB) {
+                m.activePlayersB = (teams[m.team2Index].players || []).slice();
+                m.availableSubsB = (teams[m.team2Index].subs || []).slice();
+            }
+            if (m.pendingSubA === undefined) m.pendingSubA = -1;
+            if (m.pendingSubB === undefined) m.pendingSubB = -1;
         }
 
         function clearFinalUI() {
@@ -1302,7 +1399,6 @@
         function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
             var t1 = teams[t1Index], t2 = teams[t2Index];
             var playersA = t1.players || [], playersB = t2.players || [];
-            var subsA = t1.subs || [], subsB = t2.subs || [];
 
             var title = isFinal ?
                 "Final: " + escHtml(t1.name) + " vs " + escHtml(t2.name) :
@@ -1319,14 +1415,7 @@
                 return "<span id='" + sid + "' class='player-btn scorer-only' onclick=\"setServer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
             }).join("");
 
-            // Sub buttons
-            var subBtnsA = subsA.map(function (p) {
-                return "<span class='player-btn scorer-only' onclick=\"substitutePlayer('" + matchId + "','A','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
-            }).join("");
-
-            var subBtnsB = subsB.map(function (p) {
-                return "<span class='player-btn scorer-only' onclick=\"substitutePlayer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
-            }).join("");
+            // Sub buttons are built dynamically via updateSubUI() — not inline HTML.
 
             var disabledAttr = isScorer ? "" : " disabled";
 
@@ -1381,15 +1470,15 @@
                 "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t2.name) + ":</strong><br/>" + srvB + "</div>" +
                 "  </div>" +
 
-                // Substitutions
-                "  <div class='mt-16'>" +
-                "    <div class='section-title'>" + escHtml(t1.name) + " Subs</div>" +
-                "    <div class='scorer-only'>" + subBtnsA + "</div>" +
+                // Substitutions — panels are populated dynamically by updateSubUI()
+                "  <div class='mt-16 scorer-only'>" +
+                "    <div class='section-title'>" + escHtml(t1.name) + " Substitution</div>" +
+                "    <div id='subPanel_" + matchId + "_A'></div>" +
                 "    <div id='subLog_" + matchId + "_A' class='sub-log mt-6'></div>" +
                 "  </div>" +
-                "  <div class='mt-10'>" +
-                "    <div class='section-title'>" + escHtml(t2.name) + " Subs</div>" +
-                "    <div class='scorer-only'>" + subBtnsB + "</div>" +
+                "  <div class='mt-10 scorer-only'>" +
+                "    <div class='section-title'>" + escHtml(t2.name) + " Substitution</div>" +
+                "    <div id='subPanel_" + matchId + "_B'></div>" +
                 "    <div id='subLog_" + matchId + "_B' class='sub-log mt-6'></div>" +
                 "  </div>" +
 
@@ -1411,8 +1500,9 @@
         function renderRotation(matchId, teamKey) {
             var m = matchData[matchId]; if (!m) return;
             var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
-            var teamIndex = (teamKey === "A") ? m.team1Index : m.team2Index;
-            var players = teams[teamIndex].players || [];
+            // Use active (possibly substituted) roster if available
+            var players = (teamKey === "A" ? m.activePlayersA : m.activePlayersB)
+                || teams[(teamKey === "A") ? m.team1Index : m.team2Index].players || [];
 
             function slotLabel(posNum) {
                 var name = players[posNum - 1] || ("P" + posNum);
@@ -1446,13 +1536,9 @@
             rot = rotateArray(rot);
             if (teamKey === "A") m.rotationA = rot; else m.rotationB = rot;
 
-            var teamIndex = (teamKey === "A") ? m.team1Index : m.team2Index;
-            var players = teams[teamIndex].players || [];
-            var pos1Num = rot[0];
-            var newServerPlayer = players[pos1Num - 1] || null;
-            m.serverTeam = teamKey;
-            if (teamKey === "A") m.serverPlayerA = newServerPlayer;
-            else m.serverPlayerB = newServerPlayer;
+            // NOTE: Do NOT change m.serverTeam here — manual rotation is only for
+            // arranging player positions, not for declaring who's serving.
+            // Only setServer() and side-out logic in changeScore() change serverTeam.
 
             renderRotation(matchId, teamKey);
             highlightServerButton(matchId);
@@ -1516,7 +1602,9 @@
         function highlightServerButton(matchId) {
             var m = matchData[matchId]; if (!m) return;
             var t1 = teams[m.team1Index], t2 = teams[m.team2Index];
-            var pA = t1.players || [], pB = t2.players || [];
+            // Clear highlights from all possible names (original + active roster)
+            var pA = (t1.players || []).concat(m.activePlayersA || []);
+            var pB = (t2.players || []).concat(m.activePlayersB || []);
 
             pA.forEach(function (p) {
                 var el = document.getElementById("srv_" + matchId + "_A_" + safeId(p));
@@ -1553,21 +1641,101 @@
             });
         }
 
+        // Step 1: Scorer taps a court player to mark them for substitution.
+        function selectSubOut(matchId, teamKey, playerIdx) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            var current = (teamKey === "A") ? m.pendingSubA : m.pendingSubB;
+            // Toggle: tap again to deselect
+            var next = (current === playerIdx) ? -1 : playerIdx;
+            if (teamKey === "A") m.pendingSubA = next; else m.pendingSubB = next;
+            updateSubUI(matchId, teamKey);
+        }
+
+        // Step 2: Scorer taps a bench player to complete the substitution.
         function substitutePlayer(matchId, teamKey, subName) {
             if (!isScorer) return;
             var m = matchData[matchId]; if (!m) return;
-            var logId = "subLog_" + matchId + "_" + teamKey;
-            var logDiv = document.getElementById(logId);
+            ensureActivePlayers(matchId);
+
+            var pendingIdx = (teamKey === "A") ? m.pendingSubA : m.pendingSubB;
+            if (pendingIdx < 0) {
+                alert("Tap a court player first to select who to substitute out.");
+                return;
+            }
+
+            var activePlayers = (teamKey === "A") ? m.activePlayersA : m.activePlayersB;
+            var availSubs = (teamKey === "A") ? m.availableSubsA : m.availableSubsB;
+            var playerOut = activePlayers[pendingIdx];
+
+            // Swap: bench player comes onto court, court player goes to bench
+            activePlayers[pendingIdx] = subName;
+            var benchIdx = availSubs.indexOf(subName);
+            if (benchIdx >= 0) availSubs[benchIdx] = playerOut;
+
+            // If the subbed-out player was the current server, update server pointer
+            if ((teamKey === "A" && m.serverPlayerA === playerOut) ||
+                (teamKey === "B" && m.serverPlayerB === playerOut)) {
+                if (teamKey === "A") m.serverPlayerA = subName;
+                else m.serverPlayerB = subName;
+            }
+
+            // Clear pending selection
+            if (teamKey === "A") m.pendingSubA = -1; else m.pendingSubB = -1;
+
+            // Log
             var time = new Date().toLocaleTimeString();
             var arr = (teamKey === "A") ? m.subsA : m.subsB;
             if (!arr) { arr = []; if (teamKey === "A") m.subsA = arr; else m.subsB = arr; }
-            arr.push({ time: time, player: subName });
+            arr.push({ time: time, playerIn: subName, playerOut: playerOut });
+            var logDiv = document.getElementById("subLog_" + matchId + "_" + teamKey);
             if (logDiv) {
                 var entry = document.createElement("div");
-                entry.textContent = "• " + subName + " at " + time;
+                entry.textContent = "• " + playerOut + " ⇄ " + subName + "  (" + time + ")";
                 logDiv.appendChild(entry);
             }
+
+            renderRotation(matchId, teamKey);
+            updateSubUI(matchId, teamKey);
+            highlightServerButton(matchId);
             saveToFirebase();
+        }
+
+        // Render the substitution panel for one team (court players + bench players).
+        function updateSubUI(matchId, teamKey) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            ensureActivePlayers(matchId);
+
+            var panelEl = document.getElementById("subPanel_" + matchId + "_" + teamKey);
+            if (!panelEl) return;
+
+            var activePlayers = (teamKey === "A") ? m.activePlayersA : m.activePlayersB;
+            var availSubs = (teamKey === "A") ? m.availableSubsA : m.availableSubsB;
+            var pendingIdx = (teamKey === "A") ? m.pendingSubA : m.pendingSubB;
+
+            var hasPending = (pendingIdx >= 0);
+            var hint = hasPending
+                ? "<div class='sub-hint active-hint'>✅ " + escHtml(activePlayers[pendingIdx]) + " selected — now tap a bench player to sub in</div>"
+                : "<div class='sub-hint'>Tap a court player to select who comes off</div>";
+
+            var courtHtml = "<div style='margin-bottom:2px;font-size:0.68rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.05em;'>On Court</div>";
+            activePlayers.forEach(function (p, idx) {
+                var sel = (idx === pendingIdx) ? " sub-out-selected" : "";
+                courtHtml += "<span class='sub-court-player" + sel + "' onclick=\"selectSubOut('" + matchId + "','" + teamKey + "'," + idx + ")\">" + escHtml(p) + "</span>";
+            });
+
+            var benchHtml = "<div style='margin:6px 0 2px;font-size:0.68rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.05em;'>Bench</div>";
+            if (availSubs && availSubs.length) {
+                availSubs.forEach(function (p) {
+                    var inactive = hasPending ? "" : " inactive";
+                    benchHtml += "<span class='sub-bench-player" + inactive + "' onclick=\"substitutePlayer('" + matchId + "','" + teamKey + "','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+                });
+            } else {
+                benchHtml += "<span style='font-size:0.68rem;color:var(--text-dim);'>No bench players</span>";
+            }
+
+            panelEl.innerHTML = hint + courtHtml + benchHtml;
         }
 
         // =========================================================
@@ -1735,6 +1903,18 @@
                 if (nameInput) t.name = nameInput.value.trim() || t.name;
                 if (playersInput) t.players = playersInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
                 if (subsInput) t.subs = subsInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+            });
+            // Reset per-match active rosters so they pick up the new player names
+            Object.keys(matchData).forEach(function (matchId) {
+                var m = matchData[matchId];
+                if (m) {
+                    m.activePlayersA = null;
+                    m.activePlayersB = null;
+                    m.availableSubsA = null;
+                    m.availableSubsB = null;
+                    m.pendingSubA = -1;
+                    m.pendingSubB = -1;
+                }
             });
             closeEditTeamsModal();
             rebuildAllMatchUI();
