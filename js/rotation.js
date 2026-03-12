@@ -2,6 +2,8 @@
 // ROTATION MANAGEMENT
 // =========================================================
 
+var touchDragOverElement = null;
+
 function renderRotation(matchId, teamKey) {
     var m = matchData[matchId]; if (!m) return;
     var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
@@ -24,7 +26,12 @@ function renderRotation(matchId, teamKey) {
     function posCell(courtPos, label, isServerSlot) {
         var classes = "rot-pos" + (isServerSlot ? " server-slot" : "") + (isScorer ? " draggable" : "");
         if (!isScorer) return "<div class='" + classes + "'>" + label + "</div>";
-        return "<div class='" + classes + "' draggable='true'" +
+        // data attributes used by touch handlers; inline handlers kept for mouse drag-and-drop
+        return "<div class='" + classes + "'" +
+            " data-match-id='" + matchId + "'" +
+            " data-team-key='" + teamKey + "'" +
+            " data-court-pos='" + courtPos + "'" +
+            " draggable='true'" +
             " ondragstart=\"onRotationDragStart(event,'" + matchId + "','" + teamKey + "'," + courtPos + ")\"" +
             " ondragover='onRotationDragOver(event)'" +
             " ondragleave='onRotationDragLeave(event)'" +
@@ -43,7 +50,20 @@ function renderRotation(matchId, teamKey) {
         "  " + posCell(1, slotLabel(pos1), true) +
         "  " + posCell(6, slotLabel(pos6), false) +
         "</div>";
+
+    // Attach touch listeners after rendering.
+    // passive:false on touchmove is required so preventDefault() can block page scroll.
+    if (isScorer) {
+        var cells = container.querySelectorAll('.rot-pos');
+        for (var i = 0; i < cells.length; i++) {
+            cells[i].addEventListener('touchstart', onRotationTouchStart, { passive: true });
+            cells[i].addEventListener('touchmove', onRotationTouchMove, { passive: false });
+            cells[i].addEventListener('touchend', onRotationTouchEnd, { passive: true });
+        }
+    }
 }
+
+// ---- Mouse drag-and-drop (desktop) ----
 
 function onRotationDragStart(event, matchId, teamKey, courtPos) {
     if (!isScorer) return;
@@ -70,15 +90,86 @@ function onRotationDrop(event, matchId, teamKey, targetPos) {
     if (fromPos === targetPos) return;
     var m = matchData[matchId]; if (!m) return;
     var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
-    var fromIdx = fromPos - 1;
-    var toIdx = targetPos - 1;
-    var temp = rot[fromIdx];
-    rot[fromIdx] = rot[toIdx];
-    rot[toIdx] = temp;
+    var temp = rot[fromPos - 1];
+    rot[fromPos - 1] = rot[targetPos - 1];
+    rot[targetPos - 1] = temp;
     if (teamKey === "A") m.rotationA = rot; else m.rotationB = rot;
     renderRotation(matchId, teamKey);
     saveToFirebase();
 }
+
+// ---- Touch drag-and-drop (mobile) ----
+
+function onRotationTouchStart(event) {
+    if (!isScorer) return;
+    var el = event.currentTarget;
+    rotationDragState = {
+        matchId: el.getAttribute('data-match-id'),
+        teamKey: el.getAttribute('data-team-key'),
+        courtPos: parseInt(el.getAttribute('data-court-pos'), 10)
+    };
+}
+
+function onRotationTouchMove(event) {
+    if (!rotationDragState) return;
+    event.preventDefault(); // block page scroll while dragging
+    var touch = event.touches[0];
+    var el = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    // Clear highlight from previous target
+    if (touchDragOverElement && touchDragOverElement !== el) {
+        touchDragOverElement.classList.remove('drag-over');
+    }
+
+    // Highlight new target if it's a rotation slot
+    if (el && el.classList && el.classList.contains('rot-pos')) {
+        el.classList.add('drag-over');
+        touchDragOverElement = el;
+    } else {
+        touchDragOverElement = null;
+    }
+}
+
+function onRotationTouchEnd(event) {
+    if (!isScorer || !rotationDragState) return;
+
+    if (touchDragOverElement) {
+        touchDragOverElement.classList.remove('drag-over');
+        touchDragOverElement = null;
+    }
+
+    // elementFromPoint finds the element under the finger at release
+    var touch = event.changedTouches[0];
+    var el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el || !el.classList || !el.classList.contains('rot-pos')) {
+        rotationDragState = null;
+        return;
+    }
+
+    var targetMatchId = el.getAttribute('data-match-id');
+    var targetTeamKey = el.getAttribute('data-team-key');
+    var targetPos = parseInt(el.getAttribute('data-court-pos'), 10);
+
+    if (targetMatchId !== rotationDragState.matchId || targetTeamKey !== rotationDragState.teamKey) {
+        rotationDragState = null;
+        return;
+    }
+
+    var fromPos = rotationDragState.courtPos;
+    rotationDragState = null;
+    if (fromPos === targetPos) return;
+
+    var m = matchData[targetMatchId]; if (!m) return;
+    var rot = (targetTeamKey === "A") ? m.rotationA : m.rotationB;
+    var temp = rot[fromPos - 1];
+    rot[fromPos - 1] = rot[targetPos - 1];
+    rot[targetPos - 1] = temp;
+    if (targetTeamKey === "A") m.rotationA = rot; else m.rotationB = rot;
+    renderRotation(targetMatchId, targetTeamKey);
+    saveToFirebase();
+}
+
+// ---- Manual rotation buttons ----
 
 function manualRotate(matchId, teamKey) {
     if (!isScorer) return;
