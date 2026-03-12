@@ -116,6 +116,7 @@ function populateMatchSelector() {
 }
 
 function rebuildAllMatchUI() {
+    tapSwapState = null; // clear any pending tap-to-swap selection
     var tDiv = document.getElementById("tournament");
     var ongoingDiv = document.getElementById("ongoingMatch");
     if (tDiv) tDiv.innerHTML = "";

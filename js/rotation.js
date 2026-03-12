@@ -3,6 +3,7 @@
 // =========================================================
 
 var touchDragOverElement = null;
+var tapSwapState = null; // { matchId, teamKey, courtPos } — first cell of a tap-to-swap
 
 function renderRotation(matchId, teamKey) {
     var m = matchData[matchId]; if (!m) return;
@@ -24,9 +25,16 @@ function renderRotation(matchId, teamKey) {
     var pos5 = rot[4], pos1 = rot[0], pos6 = rot[5];
 
     function posCell(courtPos, label, isServerSlot) {
-        var classes = "rot-pos" + (isServerSlot ? " server-slot" : "") + (isScorer ? " draggable" : "");
+        var isSelected = tapSwapState
+            && tapSwapState.matchId === matchId
+            && tapSwapState.teamKey === teamKey
+            && tapSwapState.courtPos === courtPos;
+        var classes = "rot-pos"
+            + (isServerSlot ? " server-slot" : "")
+            + (isScorer ? " draggable" : "")
+            + (isSelected ? " tap-selected" : "");
         if (!isScorer) return "<div class='" + classes + "'>" + label + "</div>";
-        // data attributes used by touch handlers; inline handlers kept for mouse drag-and-drop
+        // data attributes used by touch handlers; onclick handles tap-to-swap on both mobile and desktop
         return "<div class='" + classes + "'" +
             " data-match-id='" + matchId + "'" +
             " data-team-key='" + teamKey + "'" +
@@ -35,7 +43,8 @@ function renderRotation(matchId, teamKey) {
             " ondragstart=\"onRotationDragStart(event,'" + matchId + "','" + teamKey + "'," + courtPos + ")\"" +
             " ondragover='onRotationDragOver(event)'" +
             " ondragleave='onRotationDragLeave(event)'" +
-            " ondrop=\"onRotationDrop(event,'" + matchId + "','" + teamKey + "'," + courtPos + ")\">" +
+            " ondrop=\"onRotationDrop(event,'" + matchId + "','" + teamKey + "'," + courtPos + ")\"" +
+            " onclick=\"onRotationCellClick('" + matchId + "','" + teamKey + "'," + courtPos + ")\">" +
             label + "</div>";
     }
 
@@ -52,14 +61,52 @@ function renderRotation(matchId, teamKey) {
         "</div>";
 
     // Attach touch listeners after rendering.
-    // passive:false on touchmove is required so preventDefault() can block page scroll.
+    // passive:false on touchmove/touchend so preventDefault() can block scroll and suppress click.
     if (isScorer) {
         var cells = container.querySelectorAll('.rot-pos');
         for (var i = 0; i < cells.length; i++) {
             cells[i].addEventListener('touchstart', onRotationTouchStart, { passive: true });
             cells[i].addEventListener('touchmove', onRotationTouchMove, { passive: false });
-            cells[i].addEventListener('touchend', onRotationTouchEnd, { passive: true });
+            cells[i].addEventListener('touchend', onRotationTouchEnd, { passive: false });
         }
+    }
+}
+
+// ---- Tap-to-swap (click — works on both desktop and mobile taps) ----
+
+function onRotationCellClick(matchId, teamKey, courtPos) {
+    if (!isScorer) return;
+
+    if (!tapSwapState) {
+        // First tap: select this cell
+        tapSwapState = { matchId: matchId, teamKey: teamKey, courtPos: courtPos };
+        renderRotation(matchId, teamKey);
+        return;
+    }
+
+    if (tapSwapState.matchId === matchId && tapSwapState.teamKey === teamKey) {
+        var fromPos = tapSwapState.courtPos;
+        tapSwapState = null;
+        if (fromPos === courtPos) {
+            // Tapped same cell again: deselect
+            renderRotation(matchId, teamKey);
+            return;
+        }
+        // Second tap on different cell: swap
+        var m = matchData[matchId]; if (!m) return;
+        var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
+        var temp = rot[fromPos - 1];
+        rot[fromPos - 1] = rot[courtPos - 1];
+        rot[courtPos - 1] = temp;
+        if (teamKey === "A") m.rotationA = rot; else m.rotationB = rot;
+        renderRotation(matchId, teamKey);
+        saveToFirebase();
+    } else {
+        // Tapped a cell from a different team/match: move selection there
+        var prevMatchId = tapSwapState.matchId, prevTeamKey = tapSwapState.teamKey;
+        tapSwapState = { matchId: matchId, teamKey: teamKey, courtPos: courtPos };
+        renderRotation(prevMatchId, prevTeamKey); // re-render old to clear highlight
+        renderRotation(matchId, teamKey);
     }
 }
 
@@ -116,12 +163,10 @@ function onRotationTouchMove(event) {
     var touch = event.touches[0];
     var el = document.elementFromPoint(touch.clientX, touch.clientY);
 
-    // Clear highlight from previous target
     if (touchDragOverElement && touchDragOverElement !== el) {
         touchDragOverElement.classList.remove('drag-over');
     }
 
-    // Highlight new target if it's a rotation slot
     if (el && el.classList && el.classList.contains('rot-pos')) {
         el.classList.add('drag-over');
         touchDragOverElement = el;
@@ -138,7 +183,6 @@ function onRotationTouchEnd(event) {
         touchDragOverElement = null;
     }
 
-    // elementFromPoint finds the element under the finger at release
     var touch = event.changedTouches[0];
     var el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!el || !el.classList || !el.classList.contains('rot-pos')) {
@@ -157,8 +201,11 @@ function onRotationTouchEnd(event) {
 
     var fromPos = rotationDragState.courtPos;
     rotationDragState = null;
-    if (fromPos === targetPos) return;
 
+    if (fromPos === targetPos) return; // tap not drag — let click fire for tap-to-swap
+
+    // Actual drag swap: prevent the subsequent click event from also firing
+    event.preventDefault();
     var m = matchData[targetMatchId]; if (!m) return;
     var rot = (targetTeamKey === "A") ? m.rotationA : m.rotationB;
     var temp = rot[fromPos - 1];

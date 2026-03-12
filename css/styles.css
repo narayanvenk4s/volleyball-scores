@@ -292,6 +292,7 @@ body::before {
 .rot-pos.draggable { cursor: grab; }
 .rot-pos.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
 .rot-pos.server-slot { border-color: var(--yellow); background: var(--yellow-soft); color: var(--yellow); font-weight: 700; }
+.rot-pos.tap-selected { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); font-weight: 700; box-shadow: 0 0 0 2px var(--accent-glow); }
 
 /* Player buttons */
 .player-btn {
