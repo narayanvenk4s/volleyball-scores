@@ -5,6 +5,12 @@
 function initializeTournament() {
     if (!isScorer) return;
 
+    var pw = prompt("Re-enter scorer password to confirm reset:");
+    if (pw !== SCORER_PASSWORD) {
+        alert("Incorrect password. Tournament reset cancelled.");
+        return;
+    }
+
     var autoRotateCheckbox = document.getElementById("autoRotateToggle");
     autoRotate = !!(autoRotateCheckbox && autoRotateCheckbox.checked);
 
