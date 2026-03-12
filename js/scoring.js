@@ -14,6 +14,12 @@ function changeScore(matchId, teamKey, delta) {
             return;
         }
 
+        // Block scoring until a server is selected
+        if (!m.serverTeam) {
+            alert("Please select a server first using the 'Choose Server' section below.");
+            return;
+        }
+
         if (!m.rallyHistory) m.rallyHistory = [];
         m.rallyHistory.push({
             scoringTeam: teamKey,
@@ -71,11 +77,14 @@ function checkSetComplete(matchId) {
         return;
     }
 
-    // Start next set
+    // Start next set — reset server so scorer must pick who serves first
     m.currentSet = (m.currentSet || 1) + 1;
     m.scoreA = 0;
     m.scoreB = 0;
     m.rallyHistory = [];
+    m.serverTeam = null;
+    m.serverPlayerA = null;
+    m.serverPlayerB = null;
 }
 
 function undoLastPoint(matchId, teamKey) {
