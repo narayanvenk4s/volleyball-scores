@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LPSD Sports India – Volleyball Live Scores</title>
+
+    <!-- Firebase SDK (compat for simplicity) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0c0f14;
+            --surface: #161b24;
+            --surface2: #1e2430;
+            --border: #2a3140;
+            --text: #e8ecf4;
+            --text-dim: #8892a4;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --yellow-soft: rgba(234, 179, 8, 0.15);
+            --radius: 12px;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'Space Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 16px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 28px 0 20px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: clamp(1.3rem, 4vw, 1.8rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #e8ecf4, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 12px;
+            border-radius: 999px;
+            margin-top: 10px;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7);
+            }
+        }
+
+        /* Mode banner */
+        .mode-banner {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+        }
+
+        .mode-banner.viewer {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .mode-banner.scorer {
+            background: rgba(234, 179, 8, 0.1);
+            color: var(--yellow);
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            letter-spacing: -0.02em;
+        }
+
+        .card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* Match card */
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .match-title {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .match-status {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-family: var(--mono);
+        }
+
+        .team-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .team-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .team-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .team-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background-size: cover;
+            background-position: center;
+            background-color: var(--surface2);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .team-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .score-panel {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-value {
+            font-family: var(--mono);
+            font-size: 2rem;
+            font-weight: 700;
+            min-width: 56px;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .score-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .score-btn.minus:hover {
+            background: var(--red);
+            border-color: var(--red);
+        }
+
+        .score-btn:disabled {
+            opacity: 0.25;
+            cursor: default;
+        }
+
+        .score-btn:disabled:hover {
+            background: var(--surface2);
+            border-color: var(--border);
+        }
+
+        /* Rotation court */
+        .rotation-section {
+            margin-top: 14px;
+        }
+
+        .rotation-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        .rotation-court {
+            display: inline-block;
+            padding: 8px;
+            border-radius: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+        }
+
+        .rot-row {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin: 3px 0;
+        }
+
+        .rot-pos {
+            min-width: 58px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 0.68rem;
+            font-family: var(--mono);
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .rot-pos.server-slot {
+            border-color: var(--yellow);
+            background: var(--yellow-soft);
+            color: var(--yellow);
+            font-weight: 700;
+        }
+
+        /* Player buttons */
+        .player-btn {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 3px 3px 0 0;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            font-family: var(--mono);
+            color: var(--text-dim);
+            transition: all 0.15s;
+        }
+
+        .player-btn:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .server-highlight {
+            background: var(--yellow-soft) !important;
+            border-color: var(--yellow) !important;
+            color: var(--yellow) !important;
+            font-weight: 700;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--font);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-small {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-family: var(--font);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-small:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .btn-small.danger:hover {
+            background: var(--red);
+            border-color: var(--red);
+        }
+
+        /* Rotate button (scorer only) */
+        .btn-rotate {
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all 0.15s;
+        }
+
+        .btn-rotate:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* Sections inside match card */
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 16px 0 6px;
+        }
+
+        .sub-log,
+        .service-log-view {
+            background: var(--bg);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-family: var(--mono);
+            max-height: 140px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        .service-log-view table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.68rem;
+        }
+
+        .service-log-view th,
+        .service-log-view td {
+            border-bottom: 1px solid var(--border);
+            padding: 3px 4px;
+            text-align: left;
+        }
+
+        .service-log-view th {
+            background: var(--surface2);
+            color: var(--text-dim);
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+
+        /* Standings */
+        #standingsTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        #standingsTable th,
+        #standingsTable td {
+            border-bottom: 1px solid var(--border);
+            padding: 8px 6px;
+            text-align: left;
+        }
+
+        #standingsTable th {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .form-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .form-card strong {
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .form-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-top: 8px;
+            display: block;
+        }
+
+        input[type="text"],
+        select,
+        textarea {
+            font-family: var(--font);
+            width: 100%;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.85rem;
+            margin-top: 3px;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input[type="checkbox"] {
+            accent-color: var(--accent);
+        }
+
+        /* Login overlay */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(12, 15, 20, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .login-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px 32px;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            font-size: 1.3rem;
+            margin-bottom: 6px;
+        }
+
+        .login-box p {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        .login-box input[type="password"] {
+            font-family: var(--mono);
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1rem;
+            margin-bottom: 14px;
+            text-align: center;
+            letter-spacing: 0.15em;
+        }
+
+        .login-box input[type="password"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .login-error {
+            color: var(--red);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .login-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .login-buttons button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: var(--font);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .login-buttons .btn-viewer {
+            background: var(--surface2);
+            color: var(--green);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .login-buttons .btn-viewer:hover {
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .login-buttons .btn-scorer {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .login-buttons .btn-scorer:hover {
+            background: #2563eb;
+        }
+
+        /* Connection status */
+        .connection-status {
+            position: fixed;
+            top: 8px;
+            right: 12px;
+            font-size: 0.65rem;
+            font-family: var(--mono);
+            padding: 3px 10px;
+            border-radius: 999px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .connection-status.connected {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .connection-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Switch mode button */
+        .switch-mode-btn {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-dim);
+            font-family: var(--font);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .switch-mode-btn:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* Hide scorer-only elements in viewer mode */
+        body.viewer-mode .scorer-only {
+            display: none !important;
+        }
+
+        /* Flex/utility */
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .mt-16 {
+            margin-top: 16px;
+        }
+
+        .mt-10 {
+            margin-top: 10px;
+        }
+
+        .mt-6 {
+            margin-top: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .score-value {
+                font-size: 1.6rem;
+                min-width: 44px;
+            }
+
+            .team-name {
+                font-size: 0.88rem;
+            }
+
+            .container {
+                padding: 12px 10px 80px;
+            }
+        }
+
+        /* Edit teams modal */
+        .edit-teams-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(12, 15, 20, 0.92);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px 16px;
+        }
+
+        .edit-teams-modal.open {
+            display: flex;
+        }
+
+        .edit-teams-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            max-width: 720px;
+            width: 100%;
+            margin: auto;
+        }
+
+        .edit-teams-box h2 {
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+
+        .edit-teams-box > p {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        .edit-teams-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .edit-teams-btn {
+            position: fixed;
+            bottom: 16px;
+            right: 150px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            background: var(--surface);
+            color: var(--yellow);
+            font-family: var(--font);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            display: none;
+        }
+
+        body:not(.viewer-mode) .edit-teams-btn {
+            display: block;
+        }
+
+        .edit-teams-btn:hover {
+            background: rgba(234, 179, 8, 0.15);
+            border-color: var(--yellow);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="viewer-mode">
+    <!-- CONNECTION STATUS -->
+    <div id="connectionStatus" class="connection-status disconnected">
+        <span class="connection-dot"></span>
+        <span id="connectionLabel">Connecting...</span>
+    </div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" class="login-overlay" style="display:none;">
+        <div class="login-box">
+            <h2>🏐 Enter Scorer Mode</h2>
+            <p>Enter the scorer password to manage the tournament</p>
+            <input type="password" id="passwordInput" placeholder="Scorer password" />
+            <div id="loginError" class="login-error">Incorrect password. Try again.</div>
+            <div class="login-buttons">
+                <button class="btn-viewer" onclick="closeLoginOverlay()">Cancel</button>
+                <button class="btn-scorer" onclick="attemptScorerLogin()">Enter Scorer Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SWITCH MODE BUTTON -->
+    <button id="switchModeBtn" class="switch-mode-btn" onclick="handleSwitchMode()">
+        Scorer Mode
+    </button>
+
+    <!-- EDIT TEAMS BUTTON (scorer only) -->
+    <button class="edit-teams-btn" onclick="showEditTeamsModal()">✏️ Edit Teams</button>
+
+    <!-- EDIT TEAMS MODAL -->
+    <div id="editTeamsModal" class="edit-teams-modal">
+        <div class="edit-teams-box">
+            <h2>✏️ Edit Tournament Teams</h2>
+            <p>Update team names and player rosters mid-tournament. Changes sync live to all viewers.</p>
+            <div id="editTeamsGrid" class="form-grid"></div>
+            <div class="edit-teams-actions">
+                <button class="btn-small" onclick="closeEditTeamsModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveEditTeams()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <div class="header">
+            <h1>LPSD Sports India</h1>
+            <div class="subtitle">Volleyball Tournament Manager</div>
+            <div class="live-badge">Live</div>
+        </div>
+
+        <div id="modeBanner" class="mode-banner viewer" style="display:none;"></div>
+
+        <!-- SETUP (scorer only) -->
+        <div id="setupCard" class="card scorer-only">
+            <h2>Setup Tournament</h2>
+            <div class="flex-row">
+                <div>
+                    <label><strong>Round Robin Format:</strong></label><br>
+                    <select id="rrFormat">
+                        <option value="1">Single Round Robin</option>
+                        <option value="2">Double Round Robin</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;">
+                        <input type="checkbox" id="autoRotateToggle" checked />
+                        Auto-rotate on side-out
+                    </label>
+                </div>
+            </div>
+            <h3 class="mt-16">Teams & Players</h3>
+            <div id="teamSetup" class="form-grid"></div>
+            <button class="btn-primary mt-16" onclick="initializeTournament()">Start / Reset Tournament</button>
+        </div>
+
+        <!-- TOURNAMENT MATCHES -->
+        <div id="tournament"></div>
+
+        <!-- STANDINGS -->
+        <div id="standingsCard" class="card" style="display:none;">
+            <h2>Standings</h2>
+            <table id="standingsTable"></table>
+            <div class="mt-16 scorer-only">
+                <button class="btn-primary" onclick="buildFinalMatch()">Generate Final (Top 2)</button>
+            </div>
+        </div>
+
+        <!-- FINAL -->
+        <div id="finalCard" class="card" style="display:none;">
+            <div class="match-header">
+                <span class="match-title">🏆 Final Match</span>
+                <span id="finalTeamsLabel" class="match-status"></span>
+            </div>
+            <div id="finalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // CONFIGURATION — REPLACE THESE WITH YOUR FIREBASE CONFIG
+        // =========================================================
+        var FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC8fOc2PqZDPGLv3SAfWncpBiMIiUga26g",
+            authDomain: "volleyball-2026-33b20.firebaseapp.com",
+            databaseURL: "https://volleyball-2026-33b20-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "volleyball-2026-33b20",
+            storageBucket: "volleyball-2026-33b20.firebasestorage.app",
+            messagingSenderId: "261537928857",
+            appId: "1:261537928857:web:7f69fe0acca5b2ad7f8a08"
+        };
+
+        // Scorer password — change this!
+        var SCORER_PASSWORD = "vbpwd";
+
+        // =========================================================
+        // FIREBASE INIT
+        // =========================================================
+        var app, db, dbRef;
+        var firebaseReady = false;
+
+        try {
+            app = firebase.initializeApp(FIREBASE_CONFIG);
+            db = firebase.database();
+            dbRef = db.ref("tournament");
+            firebaseReady = true;
+        } catch (e) {
+            console.warn("Firebase init failed. Running in offline/demo mode.", e);
+        }
+
+        // =========================================================
+        // GLOBAL STATE
+        // =========================================================
+        var teams = [
+            { name: "Team A", logo: "", players: ["A1", "A2", "A3", "A4", "A5", "A6"], subs: ["A7", "A8", "A9"] },
+            { name: "Team B", logo: "", players: ["B1", "B2", "B3", "B4", "B5", "B6"], subs: ["B7", "B8", "B9"] },
+            { name: "Team C", logo: "", players: ["C1", "C2", "C3", "C4", "C5", "C6"], subs: ["C7", "C8", "C9"] },
+            { name: "Team D", logo: "", players: ["D1", "D2", "D3", "D4", "D5", "D6"], subs: ["D7", "D8", "D9"] }
+        ];
+
+        var schedule = [];
+        var matchData = {};
+        var autoRotate = true;
+        var LEAGUE_PREFIX = "L";
+        var FINAL_MATCH_ID = "F0";
+        var isScorer = false;
+        var localUpdate = false; // flag to skip listener re-renders during local writes
+
+        // =========================================================
+        // MODE MANAGEMENT
+        // =========================================================
+        function enterViewerMode() {
+            isScorer = false;
+            document.body.classList.add("viewer-mode");
+            document.getElementById("loginOverlay").style.display = "none";
+            document.getElementById("switchModeBtn").textContent = "Scorer Mode";
+            showModeBanner("viewer", "👁 Viewer Mode — Live scores update automatically");
+            rebuildAllMatchUI();
+        }
+
+        function attemptScorerLogin() {
+            var pw = document.getElementById("passwordInput").value;
+            if (pw === SCORER_PASSWORD) {
+                isScorer = true;
+                document.body.classList.remove("viewer-mode");
+                document.getElementById("loginOverlay").style.display = "none";
+                document.getElementById("loginError").style.display = "none";
+                document.getElementById("switchModeBtn").textContent = "← Exit Scorer";
+                showModeBanner("scorer", "✏️ Scorer Mode — Changes sync live to all viewers");
+                rebuildAllMatchUI();
+            } else {
+                document.getElementById("loginError").style.display = "block";
+            }
+        }
+
+        function handleSwitchMode() {
+            if (isScorer) {
+                enterViewerMode();
+            } else {
+                document.getElementById("loginOverlay").style.display = "flex";
+                document.getElementById("passwordInput").value = "";
+                document.getElementById("loginError").style.display = "none";
+            }
+        }
+
+        function closeLoginOverlay() {
+            document.getElementById("loginOverlay").style.display = "none";
+        }
+
+        function showModeBanner(mode, text) {
+            var el = document.getElementById("modeBanner");
+            el.className = "mode-banner " + mode;
+            el.textContent = text;
+            el.style.display = "block";
+        }
+
+        // Allow Enter key in password field
+        document.getElementById("passwordInput").addEventListener("keyup", function (e) {
+            if (e.key === "Enter") attemptScorerLogin();
+        });
+
+        // =========================================================
+        // FIREBASE SYNC
+        // =========================================================
+        function saveToFirebase() {
+            if (!firebaseReady || !isScorer) return;
+            localUpdate = true;
+            var state = {
+                teams: teams,
+                schedule: schedule,
+                matchData: matchData,
+                autoRotate: autoRotate,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            dbRef.set(state).then(function () {
+                setTimeout(function () { localUpdate = false; }, 500);
+            }).catch(function (err) {
+                console.error("Firebase write error:", err);
+                localUpdate = false;
+            });
+        }
+
+        function loadFromFirebase() {
+            if (!firebaseReady) return;
+
+            // One-time load
+            dbRef.once("value").then(function (snapshot) {
+                var data = snapshot.val();
+                if (data) applyState(data);
+            });
+
+            // Real-time listener
+            dbRef.on("value", function (snapshot) {
+                if (localUpdate) return;
+                var data = snapshot.val();
+                if (data) applyState(data);
+            });
+
+            // Connection monitoring
+            var connRef = firebase.database().ref(".info/connected");
+            connRef.on("value", function (snap) {
+                var statusEl = document.getElementById("connectionStatus");
+                var labelEl = document.getElementById("connectionLabel");
+                if (snap.val() === true) {
+                    statusEl.className = "connection-status connected";
+                    labelEl.textContent = "Live";
+                } else {
+                    statusEl.className = "connection-status disconnected";
+                    labelEl.textContent = "Offline";
+                }
+            });
+        }
+
+        function applyState(data) {
+            if (data.teams) teams = data.teams;
+            if (data.schedule) schedule = data.schedule;
+            if (data.matchData) matchData = data.matchData;
+            if (data.autoRotate !== undefined) autoRotate = data.autoRotate;
+
+            // Rebuild UI
+            renderTeamSetup();
+            rebuildAllMatchUI();
+        }
+
+        function rebuildAllMatchUI() {
+            var tDiv = document.getElementById("tournament");
+            if (tDiv) tDiv.innerHTML = "";
+
+            if (!schedule || !schedule.length) return;
+
+            schedule.forEach(function (s) {
+                var matchId = s.id;
+                if (!matchData[matchId]) {
+                    matchData[matchId] = createEmptyMatchState(matchId, s.team1Index, s.team2Index);
+                }
+                var html = buildMatchCardHTML(matchId, s.team1Index, s.team2Index, false);
+                tDiv.insertAdjacentHTML("beforeend", html);
+                renderRotation(matchId, "A");
+                renderRotation(matchId, "B");
+                refreshScoreUI(matchId);
+                highlightServerButton(matchId);
+                renderServiceLogTable(matchId);
+
+                // Re-render sub logs
+                var m = matchData[matchId];
+                if (m.subsA) m.subsA.forEach(function (sub) {
+                    var logDiv = document.getElementById("subLog_" + matchId + "_A");
+                    if (logDiv) {
+                        var entry = document.createElement("div");
+                        entry.textContent = "• " + sub.player + " at " + sub.time;
+                        logDiv.appendChild(entry);
+                    }
+                });
+                if (m.subsB) m.subsB.forEach(function (sub) {
+                    var logDiv = document.getElementById("subLog_" + matchId + "_B");
+                    if (logDiv) {
+                        var entry = document.createElement("div");
+                        entry.textContent = "• " + sub.player + " at " + sub.time;
+                        logDiv.appendChild(entry);
+                    }
+                });
+            });
+
+            // Standings
+            var standCard = document.getElementById("standingsCard");
+            if (standCard && schedule.length > 0) {
+                standCard.style.display = "block";
+                updateStandings();
+            }
+
+            // Final
+            if (matchData[FINAL_MATCH_ID]) {
+                var m = matchData[FINAL_MATCH_ID];
+                var finalCard = document.getElementById("finalCard");
+                var finalContent = document.getElementById("finalContent");
+                var finalLabel = document.getElementById("finalTeamsLabel");
+                if (finalCard && finalContent) {
+                    var html = buildMatchCardHTML(FINAL_MATCH_ID, m.team1Index, m.team2Index, true);
+                    finalContent.innerHTML = html;
+                    finalLabel.textContent = teams[m.team1Index].name + " vs " + teams[m.team2Index].name;
+                    finalCard.style.display = "block";
+                    renderRotation(FINAL_MATCH_ID, "A");
+                    renderRotation(FINAL_MATCH_ID, "B");
+                    refreshScoreUI(FINAL_MATCH_ID);
+                    highlightServerButton(FINAL_MATCH_ID);
+                    renderServiceLogTable(FINAL_MATCH_ID);
+                }
+            }
+        }
+
+        // =========================================================
+        // TEAM SETUP
+        // =========================================================
+        window.addEventListener("DOMContentLoaded", function () {
+            renderTeamSetup();
+            showModeBanner("viewer", "👁 Viewer Mode — Live scores update automatically");
+            loadFromFirebase();
+        });
+
+        function renderTeamSetup() {
+            var container = document.getElementById("teamSetup");
+            if (!container) return;
+            container.innerHTML = "";
+
+            teams.forEach(function (t, i) {
+                var html =
+                    "<div class='form-card'>" +
+                    "  <strong>Team " + (i + 1) + "</strong>" +
+                    "  <span class='form-label'>Team Name</span>" +
+                    "  <input type='text' id='teamName_" + i + "' value='" + escHtml(t.name) + "' />" +
+                    "  <span class='form-label'>Logo URL</span>" +
+                    "  <input type='text' id='logo_" + i + "' value='" + escHtml(t.logo || '') + "' />" +
+                    "  <span class='form-label'>Court Players (6, comma sep.)</span>" +
+                    "  <input type='text' id='players_" + i + "' value='" + escHtml((t.players || []).join(",")) + "' />" +
+                    "  <span class='form-label'>Subs (comma sep.)</span>" +
+                    "  <input type='text' id='subs_" + i + "' value='" + escHtml((t.subs || []).join(",")) + "' />" +
+                    "</div>";
+                container.insertAdjacentHTML("beforeend", html);
+            });
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g, "&amp;").replace(/'/g, "&#39;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // =========================================================
+        // TOURNAMENT INIT
+        // =========================================================
+        function initializeTournament() {
+            if (!isScorer) return;
+
+            var autoRotateCheckbox = document.getElementById("autoRotateToggle");
+            autoRotate = !!(autoRotateCheckbox && autoRotateCheckbox.checked);
+
+            var rrSelect = document.getElementById("rrFormat");
+            var rounds = rrSelect ? (parseInt(rrSelect.value, 10) || 1) : 1;
+
+            teams.forEach(function (t, i) {
+                var nameInput = document.getElementById("teamName_" + i);
+                var logoInput = document.getElementById("logo_" + i);
+                var playersInput = document.getElementById("players_" + i);
+                var subsInput = document.getElementById("subs_" + i);
+
+                t.name = nameInput ? nameInput.value.trim() || t.name : t.name;
+                t.logo = logoInput ? logoInput.value.trim() || "" : "";
+                if (playersInput) t.players = playersInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+                if (subsInput) t.subs = subsInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+            });
+
+            schedule = generateSchedule(rounds);
+            matchData = {};
+            clearFinalUI();
+            buildLeagueMatches();
+
+            var standCard = document.getElementById("standingsCard");
+            if (standCard) standCard.style.display = "block";
+            updateStandings();
+
+            saveToFirebase();
+        }
+
+        function generateSchedule(rounds) {
+            var result = [];
+            var counter = 0;
+            for (var r = 0; r < rounds; r++) {
+                for (var i = 0; i < teams.length; i++) {
+                    for (var j = i + 1; j < teams.length; j++) {
+                        result.push({ id: LEAGUE_PREFIX + counter, team1Index: i, team2Index: j });
+                        counter++;
+                    }
+                }
+            }
+            return result;
+        }
+
+        function createEmptyMatchState(matchId, t1, t2) {
+            return {
+                id: matchId,
+                team1Index: t1,
+                team2Index: t2,
+                scoreA: 0, scoreB: 0,
+                rotationA: [1, 2, 3, 4, 5, 6],
+                rotationB: [1, 2, 3, 4, 5, 6],
+                serverTeam: null,
+                serverPlayerA: null,
+                serverPlayerB: null,
+                rallyCounter: 0,
+                serviceLog: [],
+                subsA: [],
+                subsB: []
+            };
+        }
+
+        function clearFinalUI() {
+            var fc = document.getElementById("finalCard");
+            var fco = document.getElementById("finalContent");
+            var fl = document.getElementById("finalTeamsLabel");
+            if (fc) fc.style.display = "none";
+            if (fco) fco.innerHTML = "";
+            if (fl) fl.textContent = "";
+        }
+
+        // =========================================================
+        // BUILD MATCH UI
+        // =========================================================
+        function buildLeagueMatches() {
+            var container = document.getElementById("tournament");
+            if (container) container.innerHTML = "";
+
+            schedule.forEach(function (s) {
+                var mid = s.id;
+                matchData[mid] = createEmptyMatchState(mid, s.team1Index, s.team2Index);
+                var html = buildMatchCardHTML(mid, s.team1Index, s.team2Index, false);
+                if (container) container.insertAdjacentHTML("beforeend", html);
+                renderRotation(mid, "A");
+                renderRotation(mid, "B");
+            });
+        }
+
+        function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
+            var t1 = teams[t1Index], t2 = teams[t2Index];
+            var playersA = t1.players || [], playersB = t2.players || [];
+            var subsA = t1.subs || [], subsB = t2.subs || [];
+
+            var title = isFinal ?
+                "Final: " + escHtml(t1.name) + " vs " + escHtml(t2.name) :
+                "Match " + (parseInt(matchId.replace(LEAGUE_PREFIX, ""), 10) + 1) + ": " + escHtml(t1.name) + " vs " + escHtml(t2.name);
+
+            // Server buttons
+            var srvA = playersA.map(function (p) {
+                var sid = "srv_" + matchId + "_A_" + safeId(p);
+                return "<span id='" + sid + "' class='player-btn scorer-only' onclick=\"setServer('" + matchId + "','A','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            }).join("");
+
+            var srvB = playersB.map(function (p) {
+                var sid = "srv_" + matchId + "_B_" + safeId(p);
+                return "<span id='" + sid + "' class='player-btn scorer-only' onclick=\"setServer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            }).join("");
+
+            // Sub buttons
+            var subBtnsA = subsA.map(function (p) {
+                return "<span class='player-btn scorer-only' onclick=\"substitutePlayer('" + matchId + "','A','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            }).join("");
+
+            var subBtnsB = subsB.map(function (p) {
+                return "<span class='player-btn scorer-only' onclick=\"substitutePlayer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            }).join("");
+
+            var disabledAttr = isScorer ? "" : " disabled";
+
+            return (
+                "<div class='card' id='card_" + matchId + "'>" +
+                "  <div class='match-header'>" +
+                "    <span class='match-title'>" + title + "</span>" +
+                "  </div>" +
+
+                // Team A row
+                "  <div class='team-row'>" +
+                "    <div class='team-left'>" +
+                (t1.logo ? "      <div class='team-logo' style=\"background-image:url('" + escHtml(t1.logo) + "')\"></div>" : "") +
+                "      <span class='team-name'>" + escHtml(t1.name) + "</span>" +
+                "    </div>" +
+                "    <div class='score-panel'>" +
+                "      <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',-1)\">−</button>" +
+                "      <span id='score_" + matchId + "_A' class='score-value'>0</span>" +
+                "      <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',1)\">+</button>" +
+                "    </div>" +
+                "  </div>" +
+
+                // Team B row
+                "  <div class='team-row'>" +
+                "    <div class='team-left'>" +
+                (t2.logo ? "      <div class='team-logo' style=\"background-image:url('" + escHtml(t2.logo) + "')\"></div>" : "") +
+                "      <span class='team-name'>" + escHtml(t2.name) + "</span>" +
+                "    </div>" +
+                "    <div class='score-panel'>" +
+                "      <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',-1)\">−</button>" +
+                "      <span id='score_" + matchId + "_B' class='score-value'>0</span>" +
+                "      <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',1)\">+</button>" +
+                "    </div>" +
+                "  </div>" +
+
+                // Rotations
+                "  <div class='rotation-section'>" +
+                "    <div class='rotation-label'>" + escHtml(t1.name) + " Rotation</div>" +
+                "    <div id='rotCourt_" + matchId + "_A' class='rotation-court'></div>" +
+                "    <button class='btn-rotate scorer-only' onclick=\"manualRotate('" + matchId + "','A')\">↻ Rotate</button>" +
+                "  </div>" +
+                "  <div class='rotation-section'>" +
+                "    <div class='rotation-label'>" + escHtml(t2.name) + " Rotation</div>" +
+                "    <div id='rotCourt_" + matchId + "_B' class='rotation-court'></div>" +
+                "    <button class='btn-rotate scorer-only' onclick=\"manualRotate('" + matchId + "','B')\">↻ Rotate</button>" +
+                "  </div>" +
+
+                // Server selection (scorer only)
+                "  <div class='scorer-only mt-16'>" +
+                "    <div class='section-title'>Choose Server</div>" +
+                "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t1.name) + ":</strong><br/>" + srvA + "</div>" +
+                "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t2.name) + ":</strong><br/>" + srvB + "</div>" +
+                "  </div>" +
+
+                // Substitutions
+                "  <div class='mt-16'>" +
+                "    <div class='section-title'>" + escHtml(t1.name) + " Subs</div>" +
+                "    <div class='scorer-only'>" + subBtnsA + "</div>" +
+                "    <div id='subLog_" + matchId + "_A' class='sub-log mt-6'></div>" +
+                "  </div>" +
+                "  <div class='mt-10'>" +
+                "    <div class='section-title'>" + escHtml(t2.name) + " Subs</div>" +
+                "    <div class='scorer-only'>" + subBtnsB + "</div>" +
+                "    <div id='subLog_" + matchId + "_B' class='sub-log mt-6'></div>" +
+                "  </div>" +
+
+                // Service log
+                "  <div class='mt-16'>" +
+                "    <div class='section-title'>Service & Point Log</div>" +
+                "    <div id='serviceLogTable_" + matchId + "' class='service-log-view mt-6'></div>" +
+                "    <button class='btn-small mt-6' onclick=\"downloadServiceLog('" + matchId + "')\">↓ Download CSV</button>" +
+                "  </div>" +
+                "</div>"
+            );
+        }
+
+        function escJs(s) { return String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
+        // =========================================================
+        // ROTATION, SCORING, SERVER, SUBS (same logic as original)
+        // =========================================================
+        function renderRotation(matchId, teamKey) {
+            var m = matchData[matchId]; if (!m) return;
+            var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
+            var teamIndex = (teamKey === "A") ? m.team1Index : m.team2Index;
+            var players = teams[teamIndex].players || [];
+
+            function slotLabel(posNum) {
+                var name = players[posNum - 1] || ("P" + posNum);
+                return posNum + ": " + name;
+            }
+
+            var containerId = "rotCourt_" + matchId + "_" + teamKey;
+            var container = document.getElementById(containerId);
+            if (!container) return;
+
+            var pos4 = rot[3], pos3 = rot[2], pos2 = rot[1];
+            var pos5 = rot[4], pos1 = rot[0], pos6 = rot[5];
+
+            container.innerHTML =
+                "<div class='rot-row'>" +
+                "  <div class='rot-pos'>" + slotLabel(pos4) + "</div>" +
+                "  <div class='rot-pos'>" + slotLabel(pos3) + "</div>" +
+                "  <div class='rot-pos'>" + slotLabel(pos2) + "</div>" +
+                "</div>" +
+                "<div class='rot-row'>" +
+                "  <div class='rot-pos'>" + slotLabel(pos5) + "</div>" +
+                "  <div class='rot-pos server-slot'>" + slotLabel(pos1) + "</div>" +
+                "  <div class='rot-pos'>" + slotLabel(pos6) + "</div>" +
+                "</div>";
+        }
+
+        function manualRotate(matchId, teamKey) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
+            rot = rotateArray(rot);
+            if (teamKey === "A") m.rotationA = rot; else m.rotationB = rot;
+
+            var teamIndex = (teamKey === "A") ? m.team1Index : m.team2Index;
+            var players = teams[teamIndex].players || [];
+            var pos1Num = rot[0];
+            var newServerPlayer = players[pos1Num - 1] || null;
+            m.serverTeam = teamKey;
+            if (teamKey === "A") m.serverPlayerA = newServerPlayer;
+            else m.serverPlayerB = newServerPlayer;
+
+            renderRotation(matchId, teamKey);
+            highlightServerButton(matchId);
+            saveToFirebase();
+        }
+
+        function changeScore(matchId, teamKey, delta) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            if (delta === 0) return;
+
+            if (delta > 0) {
+                if (teamKey === "A") m.scoreA += delta; else m.scoreB += delta;
+                m.rallyCounter += 1;
+                logServiceEvent(matchId, teamKey);
+                if (autoRotate && m.serverTeam && m.serverTeam !== teamKey) {
+                    manualRotateInternal(matchId, teamKey);
+                }
+            } else {
+                if (teamKey === "A") m.scoreA = Math.max(0, m.scoreA + delta);
+                else m.scoreB = Math.max(0, m.scoreB + delta);
+            }
+
+            refreshScoreUI(matchId);
+            renderRotation(matchId, "A");
+            renderRotation(matchId, "B");
+            updateStandings();
+            renderServiceLogTable(matchId);
+            saveToFirebase();
+        }
+
+        // Internal rotate that doesn't trigger a separate save
+        function manualRotateInternal(matchId, teamKey) {
+            var m = matchData[matchId]; if (!m) return;
+            var rot = (teamKey === "A") ? m.rotationA : m.rotationB;
+            rot = rotateArray(rot);
+            if (teamKey === "A") m.rotationA = rot; else m.rotationB = rot;
+
+            var teamIndex = (teamKey === "A") ? m.team1Index : m.team2Index;
+            var players = teams[teamIndex].players || [];
+            var pos1Num = rot[0];
+            var newServerPlayer = players[pos1Num - 1] || null;
+            m.serverTeam = teamKey;
+            if (teamKey === "A") m.serverPlayerA = newServerPlayer;
+            else m.serverPlayerB = newServerPlayer;
+
+            renderRotation(matchId, teamKey);
+            highlightServerButton(matchId);
+        }
+
+        function setServer(matchId, teamKey, playerName) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            m.serverTeam = teamKey;
+            if (teamKey === "A") m.serverPlayerA = playerName;
+            else m.serverPlayerB = playerName;
+            highlightServerButton(matchId);
+            saveToFirebase();
+        }
+
+        function highlightServerButton(matchId) {
+            var m = matchData[matchId]; if (!m) return;
+            var t1 = teams[m.team1Index], t2 = teams[m.team2Index];
+            var pA = t1.players || [], pB = t2.players || [];
+
+            pA.forEach(function (p) {
+                var el = document.getElementById("srv_" + matchId + "_A_" + safeId(p));
+                if (el) el.classList.remove("server-highlight");
+            });
+            pB.forEach(function (p) {
+                var el = document.getElementById("srv_" + matchId + "_B_" + safeId(p));
+                if (el) el.classList.remove("server-highlight");
+            });
+
+            if (m.serverPlayerA) {
+                var elA = document.getElementById("srv_" + matchId + "_A_" + safeId(m.serverPlayerA));
+                if (elA) elA.classList.add("server-highlight");
+            }
+            if (m.serverPlayerB) {
+                var elB = document.getElementById("srv_" + matchId + "_B_" + safeId(m.serverPlayerB));
+                if (elB) elB.classList.add("server-highlight");
+            }
+        }
+
+        function logServiceEvent(matchId, scoringTeam) {
+            var m = matchData[matchId]; if (!m) return;
+            var serverTeam = m.serverTeam;
+            var serverPlayer = (serverTeam === "A") ? m.serverPlayerA : m.serverPlayerB;
+            if (!m.serviceLog) m.serviceLog = [];
+            m.serviceLog.push({
+                time: new Date().toLocaleTimeString(),
+                serverTeam: serverTeam,
+                serverPlayer: serverPlayer || "",
+                scoringTeam: scoringTeam,
+                scoreA: m.scoreA,
+                scoreB: m.scoreB,
+                rally: m.rallyCounter
+            });
+        }
+
+        function substitutePlayer(matchId, teamKey, subName) {
+            if (!isScorer) return;
+            var m = matchData[matchId]; if (!m) return;
+            var logId = "subLog_" + matchId + "_" + teamKey;
+            var logDiv = document.getElementById(logId);
+            var time = new Date().toLocaleTimeString();
+            var arr = (teamKey === "A") ? m.subsA : m.subsB;
+            if (!arr) { arr = []; if (teamKey === "A") m.subsA = arr; else m.subsB = arr; }
+            arr.push({ time: time, player: subName });
+            if (logDiv) {
+                var entry = document.createElement("div");
+                entry.textContent = "• " + subName + " at " + time;
+                logDiv.appendChild(entry);
+            }
+            saveToFirebase();
+        }
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
+        function rotateArray(arr) {
+            if (!arr || !arr.length) return arr;
+            var copy = arr.slice();
+            var last = copy.pop();
+            copy.unshift(last);
+            return copy;
+        }
+
+        function refreshScoreUI(matchId) {
+            var m = matchData[matchId]; if (!m) return;
+            var a = document.getElementById("score_" + matchId + "_A");
+            var b = document.getElementById("score_" + matchId + "_B");
+            if (a) a.textContent = m.scoreA;
+            if (b) b.textContent = m.scoreB;
+        }
+
+        function safeId(str) { return String(str).replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+        // =========================================================
+        // SERVICE LOG TABLE + CSV
+        // =========================================================
+        function renderServiceLogTable(matchId) {
+            var m = matchData[matchId]; if (!m) return;
+            var container = document.getElementById("serviceLogTable_" + matchId);
+            if (!container) return;
+            var log = m.serviceLog || [];
+            if (!log.length) {
+                container.innerHTML = "<div style='color:var(--text-dim);font-size:0.72rem;padding:4px;'>No serves recorded yet.</div>";
+                return;
+            }
+            var html = "<table><thead><tr><th>Rally</th><th>Time</th><th>Server</th><th>Scorer</th><th>Score</th></tr></thead><tbody>";
+            log.forEach(function (e) {
+                html += "<tr>" +
+                    "<td>" + (e.rally || "") + "</td>" +
+                    "<td>" + (e.time || "") + "</td>" +
+                    "<td>" + (e.serverTeam || "") + (e.serverPlayer ? " (" + e.serverPlayer + ")" : "") + "</td>" +
+                    "<td>" + (e.scoringTeam || "") + "</td>" +
+                    "<td>" + (e.scoreA != null ? e.scoreA : "") + " – " + (e.scoreB != null ? e.scoreB : "") + "</td>" +
+                    "</tr>";
+            });
+            html += "</tbody></table>";
+            container.innerHTML = html;
+        }
+
+        function downloadServiceLog(matchId) {
+            var m = matchData[matchId];
+            if (!m || !m.serviceLog || !m.serviceLog.length) { alert("No service log."); return; }
+            var rows = [["Rally", "Time", "ServerTeam", "ServerPlayer", "ScoringTeam", "ScoreA", "ScoreB"].join(",")];
+            m.serviceLog.forEach(function (e) {
+                var row = [e.rally || "", e.time || "", e.serverTeam || "", e.serverPlayer || "", e.scoringTeam || "", (e.scoreA != null ? e.scoreA : ""), (e.scoreB != null ? e.scoreB : "")];
+                row = row.map(function (c) { var s = String(c).replace(/"/g, '""'); return (s.indexOf(",") >= 0 || s.indexOf('"') >= 0) ? '"' + s + '"' : s; });
+                rows.push(row.join(","));
+            });
+            var blob = new Blob([rows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a"); a.href = url; a.download = "service_log_" + matchId + ".csv";
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // =========================================================
+        // STANDINGS
+        // =========================================================
+        function getStandingsData() {
+            var n = teams.length;
+            var wins = new Array(n).fill(0);
+            var pf = new Array(n).fill(0);
+            var pa = new Array(n).fill(0);
+            schedule.forEach(function (s) {
+                var m = matchData[s.id]; if (!m) return;
+                pf[s.team1Index] += m.scoreA; pa[s.team1Index] += m.scoreB;
+                pf[s.team2Index] += m.scoreB; pa[s.team2Index] += m.scoreA;
+                if (m.scoreA > m.scoreB) wins[s.team1Index]++;
+                else if (m.scoreB > m.scoreA) wins[s.team2Index]++;
+            });
+            var data = [];
+            for (var i = 0; i < n; i++) data.push({ idx: i, name: teams[i].name, wins: wins[i], pf: pf[i], pa: pa[i] });
+            data.sort(function (a, b) { return b.wins !== a.wins ? b.wins - a.wins : (b.pf - b.pa) - (a.pf - a.pa); });
+            return data;
+        }
+
+        function updateStandings() {
+            var table = document.getElementById("standingsTable");
+            if (!table) return;
+            var data = getStandingsData();
+            var html = "<tr><th>#</th><th>Team</th><th>W</th><th>PF</th><th>PA</th><th>Diff</th></tr>";
+            data.forEach(function (row, idx) {
+                var diff = row.pf - row.pa;
+                html += "<tr>" +
+                    "<td>" + (idx + 1) + "</td>" +
+                    "<td>" + escHtml(row.name) + "</td>" +
+                    "<td style='font-weight:700;'>" + row.wins + "</td>" +
+                    "<td>" + row.pf + "</td>" +
+                    "<td>" + row.pa + "</td>" +
+                    "<td style='color:" + (diff >= 0 ? "var(--green)" : "var(--red)") + ";font-weight:600;'>" + (diff >= 0 ? "+" : "") + diff + "</td>" +
+                    "</tr>";
+            });
+            table.innerHTML = html;
+        }
+
+        // =========================================================
+        // FINAL MATCH
+        // =========================================================
+        function buildFinalMatch() {
+            if (!isScorer) return;
+            var data = getStandingsData();
+            if (!data || data.length < 2) { alert("Need at least 2 teams."); return; }
+
+            var t1Index = data[0].idx, t2Index = data[1].idx;
+            matchData[FINAL_MATCH_ID] = createEmptyMatchState(FINAL_MATCH_ID, t1Index, t2Index);
+
+            var finalCard = document.getElementById("finalCard");
+            var finalContent = document.getElementById("finalContent");
+            var finalLabel = document.getElementById("finalTeamsLabel");
+
+            var html = buildMatchCardHTML(FINAL_MATCH_ID, t1Index, t2Index, true);
+            if (finalContent) finalContent.innerHTML = html;
+            if (finalLabel) finalLabel.textContent = teams[t1Index].name + " vs " + teams[t2Index].name;
+            if (finalCard) finalCard.style.display = "block";
+
+            renderRotation(FINAL_MATCH_ID, "A");
+            renderRotation(FINAL_MATCH_ID, "B");
+            renderServiceLogTable(FINAL_MATCH_ID);
+            saveToFirebase();
+        }
+        // =========================================================
+        // EDIT TOURNAMENT (TEAM NAMES / PLAYERS)
+        // =========================================================
+        function showEditTeamsModal() {
+            if (!isScorer) return;
+            var grid = document.getElementById("editTeamsGrid");
+            if (!grid) return;
+            grid.innerHTML = "";
+            teams.forEach(function (t, i) {
+                var html =
+                    "<div class='form-card'>" +
+                    "  <strong>Team " + (i + 1) + ": " + escHtml(t.name) + "</strong>" +
+                    "  <span class='form-label'>Team Name</span>" +
+                    "  <input type='text' id='editTeamName_" + i + "' value='" + escHtml(t.name) + "' />" +
+                    "  <span class='form-label'>Court Players (6, comma sep.)</span>" +
+                    "  <input type='text' id='editPlayers_" + i + "' value='" + escHtml((t.players || []).join(", ")) + "' />" +
+                    "  <span class='form-label'>Subs (comma sep.)</span>" +
+                    "  <input type='text' id='editSubs_" + i + "' value='" + escHtml((t.subs || []).join(", ")) + "' />" +
+                    "</div>";
+                grid.insertAdjacentHTML("beforeend", html);
+            });
+            document.getElementById("editTeamsModal").classList.add("open");
+        }
+
+        function closeEditTeamsModal() {
+            document.getElementById("editTeamsModal").classList.remove("open");
+        }
+
+        function saveEditTeams() {
+            if (!isScorer) return;
+            teams.forEach(function (t, i) {
+                var nameInput = document.getElementById("editTeamName_" + i);
+                var playersInput = document.getElementById("editPlayers_" + i);
+                var subsInput = document.getElementById("editSubs_" + i);
+                if (nameInput) t.name = nameInput.value.trim() || t.name;
+                if (playersInput) t.players = playersInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+                if (subsInput) t.subs = subsInput.value.split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+            });
+            closeEditTeamsModal();
+            rebuildAllMatchUI();
+            renderTeamSetup();
+            saveToFirebase();
+        }
+
+    </script>
+</body>
+
+</html>
