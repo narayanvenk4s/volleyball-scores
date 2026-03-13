@@ -1083,6 +1083,7 @@ body:not(.viewer-mode) .edit-teams-btn { display: block; }
 
 
 .referee-page .container { max-width: 1100px; }
+.referee-page .referee-header-row h1 { font-size: 1.7rem; }
 .referee-header-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .referee-header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .referee-theme-row { padding: 0; }
@@ -1100,13 +1101,24 @@ body:not(.viewer-mode) .edit-teams-btn { display: block; }
 .header-pill-link:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .ref-scoreboard {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr auto 1fr;
     gap: 10px;
     text-align: center;
     align-items: center;
 }
-.ref-team-name { font-size: 1.2rem; font-weight: 700; }
-.ref-score { font-size: 4rem; font-weight: 700; line-height: 1; }
+.ref-team-name { font-size: 1.28rem; font-weight: 700; }
+.ref-score { font-size: 5rem; font-weight: 800; line-height: 1; }
+.ref-score-set-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+}
+.ref-score-set-label--mid {
+    font-size: 1.05rem;
+    color: var(--accent);
+}
 .ref-sets { font-size: 1rem; color: var(--text-dim); }
 .ref-server-current { margin-top: 14px; font-size: 1rem; font-weight: 700; }
 .ref-section-title { margin-top: 14px; margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.06em; }
@@ -1119,7 +1131,10 @@ body:not(.viewer-mode) .edit-teams-btn { display: block; }
 .ref-pill-wrap .player-btn { cursor: default; margin-bottom: 4px; }
 
 @media (max-width: 900px) {
-    .ref-score { font-size: 2.8rem; }
+    .ref-score { font-size: 3.4rem; }
+    .referee-page .referee-header-row h1 { font-size: 1.45rem; }
+    .ref-score-set-label { font-size: 0.8rem; }
+    .ref-score-set-label--mid { font-size: 0.92rem; }
     .ref-summary-grid { grid-template-columns: 1fr; }
     .ref-rosters { grid-template-columns: 1fr; }
 }
