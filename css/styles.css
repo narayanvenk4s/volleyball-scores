@@ -422,7 +422,7 @@ body::before {
 .btn-rotate:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* =========================================================
-   COMBINED COURT VIEW
+   COMBINED COURT VIEW — horizontal layout (vertical net)
    ========================================================= */
 .court-view {
     margin: 12px 0;
@@ -430,23 +430,35 @@ body::before {
     border-radius: 10px;
     overflow: hidden;
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Horizontal row: [Team A half] [vertical net] [Team B half] */
+.court-main {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
 }
 
 /* Each team occupies one half of the court */
 .court-half {
+    flex: 1;
     background: var(--surface2);
+    min-width: 0;
 }
 
-/* Flex row: vertical team name label on left, rotation grid on right */
+/* Inner flex row for each half */
 .court-half-inner {
     display: flex;
+    flex-direction: row;
     align-items: stretch;
+    height: 100%;
 }
 
 /* Vertical team name label */
 .court-team-side {
     writing-mode: vertical-rl;
-    transform: rotate(180deg);
     font-size: 0.7rem;
     font-weight: 700;
     color: var(--text-dim);
@@ -455,13 +467,20 @@ body::before {
     text-align: center;
     padding: 8px 5px;
     background: var(--surface);
-    border-right: 1px solid var(--border);
     flex-shrink: 0;
-    min-width: 24px;
+    min-width: 22px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 120px;
+}
+/* Left team: name on far left, text reads upward, border on right */
+.court-left .court-team-side {
+    transform: rotate(180deg);
+    border-right: 1px solid var(--border);
+}
+/* Right team: name on far right, text reads downward, border on left */
+.court-right .court-team-side {
+    border-left: 1px solid var(--border);
 }
 
 /* Rotation grid wrapper inside each half */
@@ -481,10 +500,6 @@ body::before {
     width: 100%;
 }
 
-/* Top team: flip row order so front row (2,3,4) is at the bottom, near the net */
-.court-top .rotation-court { flex-direction: column-reverse; }
-.court-bottom .rotation-court { flex-direction: column; }
-
 /* Rotate/Undo buttons inside each half */
 .court-half-btns {
     display: flex;
@@ -494,43 +509,45 @@ body::before {
     margin-top: 6px;
 }
 
-/* Net row: scores on left & right, NET label + set info in the middle */
-.court-net-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    background: var(--bg);
-    border-top: 2px solid var(--border);
-    border-bottom: 2px solid var(--border);
-}
-
+/* Score column at the net edge of each half (stacked: + / score / −) */
 .court-net-score {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-}
-.court-net-left  { justify-content: flex-start; }
-.court-net-right { justify-content: flex-end; }
-
-.net-score-num {
-    font-family: var(--mono);
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text);
-    min-width: 48px;
-    text-align: center;
-}
-
-.court-net-divider {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 6px;
+    background: var(--bg);
     flex-shrink: 0;
-    gap: 2px;
+    min-width: 48px;
+}
+
+.net-score-num {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Vertical net column in the center */
+.court-net-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    background: var(--bg);
+    border-left: 2px solid var(--border);
+    border-right: 2px solid var(--border);
+    flex-shrink: 0;
+    min-width: 32px;
+    gap: 6px;
 }
 .net-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
     font-size: 0.6rem;
     font-weight: 700;
     color: var(--text-dim);
@@ -538,7 +555,9 @@ body::before {
     font-family: var(--mono);
 }
 .net-set-label {
-    font-size: 0.58rem;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 0.55rem;
     color: var(--text-dim);
     font-family: var(--mono);
     white-space: nowrap;
