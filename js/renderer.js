@@ -87,14 +87,17 @@ function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
         "    <div id='setHistory_" + matchId + "' class='set-history'></div>" +
         "  </div>" +
 
-        // Combined court view: horizontal layout — Team A on LEFT, vertical NET, Team B on RIGHT
+        // Combined court view: horizontal layout — Team A on LEFT, Team B on RIGHT
         "  <div class='court-view'>" +
+        "    <div class='court-team-header'>" +
+        "      <div class='court-team-label left'>" + escHtml(t1.name) + "</div>" +
+        "      <div class='court-team-label right'>" + escHtml(t2.name) + "</div>" +
+        "    </div>" +
         "    <div class='court-main'>" +
 
         // LEFT: Team A
         "      <div class='court-half court-left' id='courtHalfA_" + matchId + "'>" +
         "        <div class='court-half-inner'>" +
-        "          <div class='court-team-side'>" + escHtml(t1.name) + "</div>" +
         "          <div class='court-half-grid'>" +
         "            <div id='rotCourt_" + matchId + "_A' class='rotation-court'></div>" +
         "            <div class='court-half-btns scorer-only'>" +
@@ -131,7 +134,6 @@ function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
         "              <button class='btn-rotate' onclick=\"undoLastPoint('" + matchId + "','B')\">↺ Undo " + escHtml(t2.name) + "</button>" +
         "            </div>" +
         "          </div>" +
-        "          <div class='court-team-side'>" + escHtml(t2.name) + "</div>" +
         "        </div>" +
         "      </div>" +
 
@@ -147,8 +149,8 @@ function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
         // Server selection (scorer only)
         "  <div class='scorer-only mt-16'>" +
         "    <div class='section-title'>Choose Server</div>" +
-        "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t1.name) + ":</strong><br/><span id='srvContainer_" + matchId + "_A'></span></div>" +
-        "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t2.name) + ":</strong><br/><span id='srvContainer_" + matchId + "_B'></span></div>" +
+        "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t1.name) + ":</strong><br/><span id='srvContainer_" + matchId + "_A'></span><div id='serverWarning_" + matchId + "_A' class='server-position-warning'></div></div>" +
+        "    <div class='mt-6'><strong style='font-size:0.8rem;'>" + escHtml(t2.name) + ":</strong><br/><span id='srvContainer_" + matchId + "_B'></span><div id='serverWarning_" + matchId + "_B' class='server-position-warning'></div></div>" +
         "  </div>" +
 
         // Substitutions

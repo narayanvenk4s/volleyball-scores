@@ -3,6 +3,9 @@
 // =========================================================
 var app, db, dbRef;
 var firebaseReady = false;
+var pendingWrite = false;
+var lastWriteAckAt = 0;
+var writeErrorState = false;
 
 try {
     app = firebase.initializeApp(FIREBASE_CONFIG);
@@ -11,6 +14,14 @@ try {
     firebaseReady = true;
 } catch (e) {
     console.warn("Firebase init failed. Running in offline/demo mode.", e);
+}
+
+function setConnectionLabel(text, connectedClass) {
+    var statusEl = document.getElementById("connectionStatus");
+    var labelEl = document.getElementById("connectionLabel");
+    if (!statusEl || !labelEl) return;
+    statusEl.className = "connection-status " + connectedClass;
+    labelEl.textContent = text;
 }
 
 function saveToFirebase() {
@@ -24,10 +35,20 @@ function saveToFirebase() {
         activeMatchId: activeMatchId,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
+    pendingWrite = true;
+    writeErrorState = false;
+    if (isScorer) setConnectionLabel("Syncing…", "connected");
     dbRef.set(state).then(function () {
-        setTimeout(function () { localUpdate = false; }, 2000);
+        lastWriteAckAt = Date.now();
+        pendingWrite = false;
+        writeErrorState = false;
+        if (isScorer) setConnectionLabel("Synced", "connected");
+        setTimeout(function () { localUpdate = false; }, 500);
     }).catch(function (err) {
         console.error("Firebase write error:", err);
+        pendingWrite = false;
+        writeErrorState = true;
+        if (isScorer) setConnectionLabel("Sync issue", "disconnected");
         localUpdate = false;
     });
 }
@@ -54,13 +75,25 @@ function loadFromFirebase() {
         var statusEl = document.getElementById("connectionStatus");
         var labelEl = document.getElementById("connectionLabel");
         if (snap.val() === true) {
-            statusEl.className = "connection-status connected";
-            labelEl.textContent = "Live";
+            if (isScorer) {
+                if (writeErrorState) setConnectionLabel("Sync issue", "disconnected");
+                else if (pendingWrite) setConnectionLabel("Syncing…", "connected");
+                else setConnectionLabel("Synced", "connected");
+            } else {
+                setConnectionLabel("Live", "connected");
+            }
         } else {
-            statusEl.className = "connection-status disconnected";
-            labelEl.textContent = "Offline";
+            setConnectionLabel("Offline", "disconnected");
         }
     });
+
+    setInterval(function () {
+        if (!isScorer || !firebaseReady) return;
+        if (writeErrorState) return;
+        if (!pendingWrite && lastWriteAckAt && (Date.now() - lastWriteAckAt > 15000)) {
+            setConnectionLabel("No recent sync", "disconnected");
+        }
+    }, 5000);
 }
 
 function applyState(data) {

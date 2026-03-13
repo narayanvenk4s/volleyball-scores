@@ -73,6 +73,7 @@
     <div class="container">
         <!-- THEME SELECTOR -->
         <div class="theme-selector-row">
+            <span class="theme-selector-label">Theme</span>
             <select id="themeSelector" class="theme-selector" aria-label="Display theme" onchange="setDisplayTheme(this.value)">
                 <option value="night">🌙 Indoor / Night</option>
                 <option value="day">☀️ Outdoor / Daylight</option>
@@ -80,9 +81,8 @@
         </div>
 
         <div class="header">
-            <h1>LPSD Sports India</h1>
-            <div class="subtitle">Volleyball Tournament Manager</div>
-            <div class="live-badge">Live</div>
+            <h1>Volleyball Tournament</h1>
+            <div id="headerDate" class="subtitle"></div>
         </div>
 
         <div id="modeBanner" class="mode-banner viewer" style="display:none;"></div>
@@ -97,25 +97,30 @@
 
         <!-- SETUP (scorer only) -->
         <div id="setupCard" class="card scorer-only">
-            <h2>Setup Tournament</h2>
-            <div class="flex-row">
-                <div>
-                    <label><strong>Round Robin Format:</strong></label><br>
-                    <select id="rrFormat">
-                        <option value="1">Single Round Robin</option>
-                        <option value="2">Double Round Robin</option>
-                    </select>
+            <button id="setupToggleBtn" class="setup-toggle" onclick="toggleSetupCard()" aria-expanded="true" aria-controls="setupBody">
+                <span>Setup Tournament</span>
+                <span id="setupToggleIcon">▾</span>
+            </button>
+            <div id="setupBody">
+                <div class="flex-row">
+                    <div>
+                        <label><strong>Round Robin Format:</strong></label><br>
+                        <select id="rrFormat">
+                            <option value="1">Single Round Robin</option>
+                            <option value="2">Double Round Robin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.85rem;">
+                            <input type="checkbox" id="autoRotateToggle" checked />
+                            Auto-rotate on side-out
+                        </label>
+                    </div>
                 </div>
-                <div>
-                    <label style="font-size:0.85rem;">
-                        <input type="checkbox" id="autoRotateToggle" checked />
-                        Auto-rotate on side-out
-                    </label>
-                </div>
+                <h3 class="mt-16">Teams & Players</h3>
+                <div id="teamSetup" class="form-grid"></div>
+                <button class="btn-primary mt-16" onclick="initializeTournament()">Start / Reset Tournament</button>
             </div>
-            <h3 class="mt-16">Teams & Players</h3>
-            <div id="teamSetup" class="form-grid"></div>
-            <button class="btn-primary mt-16" onclick="initializeTournament()">Start / Reset Tournament</button>
         </div>
 
         <!-- ONGOING MATCH (top in viewer mode) -->

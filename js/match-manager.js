@@ -24,6 +24,8 @@ function createEmptyMatchState(matchId, t1, t2) {
         availableSubsB: null,
         pendingSubA: -1,
         pendingSubB: -1,
+        pendingSubLogA: null,
+        pendingSubLogB: null,
         currentSet: 1,
         setsWonA: 0,
         setsWonB: 0,

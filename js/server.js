@@ -9,7 +9,29 @@ function setServer(matchId, teamKey, playerName) {
     if (teamKey === "A") m.serverPlayerA = playerName;
     else m.serverPlayerB = playerName;
     highlightServerButton(matchId);
+    updateServerWarnings(matchId);
     saveToFirebase();
+}
+
+function getServerPositionWarning(matchId, teamKey, playerName) {
+    var m = matchData[matchId]; if (!m) return "";
+    var players = teamKey === "A" ? (m.activePlayersA || teams[m.team1Index].players || []) : (m.activePlayersB || teams[m.team2Index].players || []);
+    var rot = teamKey === "A" ? (m.rotationA || []) : (m.rotationB || []);
+    var pos1Player = players[(rot[0] || 1) - 1];
+    if (!playerName || !pos1Player || pos1Player === playerName) return "";
+    return "⚠ Selected server is not in position 1 (rear-left). Current position-1 player: " + pos1Player;
+}
+
+function updateServerWarnings(matchId) {
+    var m = matchData[matchId]; if (!m) return;
+    ["A","B"].forEach(function (teamKey) {
+        var warnEl = document.getElementById("serverWarning_" + matchId + "_" + teamKey);
+        if (!warnEl) return;
+        var selected = teamKey === "A" ? m.serverPlayerA : m.serverPlayerB;
+        var msg = getServerPositionWarning(matchId, teamKey, selected);
+        warnEl.textContent = msg;
+        warnEl.className = "server-position-warning" + (msg ? " show" : "");
+    });
 }
 
 // Render server-selection buttons using the active (possibly substituted) roster.
@@ -36,6 +58,7 @@ function renderServerButtons(matchId) {
         }).join("");
     }
     highlightServerButton(matchId);
+    updateServerWarnings(matchId);
 }
 
 function highlightServerButton(matchId) {
@@ -69,6 +92,8 @@ function logServiceEvent(matchId, scoringTeam) {
     var serverTeam = m.serverTeam;
     var serverPlayer = (serverTeam === "A") ? m.serverPlayerA : m.serverPlayerB;
     if (!m.serviceLog) m.serviceLog = [];
+    m.pendingSubLogA = null;
+    m.pendingSubLogB = null;
     m.serviceLog.push({
         time: new Date().toLocaleTimeString(),
         serverTeam: serverTeam,

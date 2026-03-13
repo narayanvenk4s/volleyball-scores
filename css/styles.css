@@ -71,12 +71,12 @@ body::before {
 /* Header */
 .header {
     text-align: center;
-    padding: 28px 0 20px;
+    padding: 12px 0 8px;
     position: relative;
 }
 
 .header h1 {
-    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    font-size: clamp(1.5rem, 4.4vw, 2rem);
     font-weight: 700;
     letter-spacing: -0.03em;
     background: linear-gradient(135deg, #e8ecf4, #3b82f6);
@@ -86,42 +86,14 @@ body::before {
 }
 
 .header .subtitle {
-    font-size: 0.85rem;
+    font-size: 0.74rem;
     color: var(--text-dim);
-    margin-top: 4px;
-}
-
-.live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(239, 68, 68, 0.15);
-    color: var(--red);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 4px 12px;
-    border-radius: 999px;
-    margin-top: 10px;
-}
-
-.live-badge::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    background: var(--red);
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
+    margin-top: 2px;
 }
 
 /* Mode banner */
 .mode-banner {
+    display: none !important;
     text-align: center;
     padding: 8px;
     font-size: 0.78rem;
@@ -236,7 +208,7 @@ body::before {
 
 .score-value {
     font-family: var(--mono);
-    font-size: 2.1rem;
+    font-size: 1.9rem;
     font-weight: 700;
     min-width: 56px;
     text-align: center;
@@ -301,12 +273,14 @@ body::before {
     border-radius: 6px;
     background: var(--bg);
     border: 1px solid var(--border);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-family: var(--font);
     text-align: center;
     color: var(--text-dim);
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
     line-height: 1.2;
 }
 
@@ -325,7 +299,7 @@ body::before {
     border: 1px solid var(--border);
     border-radius: 999px;
     cursor: pointer;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-family: var(--mono);
     color: var(--text-dim);
     transition: all 0.15s;
@@ -461,30 +435,36 @@ body::before {
     height: 100%;
 }
 
-/* Vertical team name label */
-.court-team-side {
-    writing-mode: vertical-rl;
-    font-size: 0.7rem;
+.court-team-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.court-team-label {
+    font-size: 0.66rem;
     font-weight: 700;
     color: var(--text-dim);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    text-align: center;
-    padding: 8px 5px;
-    background: var(--surface);
-    flex-shrink: 0;
-    min-width: 22px;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* Left half: team label on outer-left, score buttons on inner-right (near net) */
-.court-left .court-team-side  { order: 1; transform: rotate(180deg); border-right: 1px solid var(--border); }
+
+.court-team-label.right {
+    text-align: right;
+}
+
+/* Left half: score buttons on inner-right (near net) */
 .court-left .court-half-grid  { order: 2; }
 .court-left .court-net-score  { order: 3; }
 
 /* Right half: score buttons on inner-left (near net), team label on outer-right */
-.court-right .court-team-side { order: 3; border-left: 1px solid var(--border); }
+.court-right .court-team-label { text-align: right; }
 .court-right .court-half-grid { order: 2; }
 .court-right .court-net-score { order: 1; }
 
@@ -529,7 +509,7 @@ body::before {
 
 .net-score-num {
     font-family: var(--mono);
-    font-size: 1.8rem;
+    font-size: 1.65rem;
     font-weight: 700;
     color: var(--text);
     min-width: 40px;
@@ -903,7 +883,34 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .theme-selector-row {
     display: flex;
     justify-content: flex-end;
-    padding: 8px 0 4px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 2px;
+}
+.theme-selector-label {
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+.setup-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#setupBody.collapsed {
+    display: none;
 }
 
 
@@ -919,14 +926,14 @@ body.viewer-mode .scorer-only { display: none !important; }
 /* Responsive */
 @media (max-width: 600px) {
     body { font-size: 18px; }
-    .score-value { font-size: 2.2rem; min-width: 56px; }
+    .score-value { font-size: 2rem; min-width: 52px; }
     .team-name { font-size: 1.05rem; }
     .match-title, .compact-match-title, .other-matches-label, .active-match-label { font-size: 0.84rem; }
     .compact-team-name { font-size: 1rem; }
     .compact-score { font-size: 1.3rem; }
     .compact-sets, .compact-status { font-size: 0.82rem; }
     .viewer-bench-grid { grid-template-columns: 1fr; }
-    .rot-pos { font-size: 0.82rem; padding: 6px; }
+    .rot-pos { font-size: 0.76rem; padding: 6px 5px; }
     .container { padding: 12px 10px 96px; }
     .switch-mode-btn { bottom: 12px; right: 10px; }
 }
@@ -996,4 +1003,16 @@ body:not(.viewer-mode) .edit-teams-btn { display: block; }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+
+.server-position-warning {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    color: var(--yellow);
+    display: none;
+}
+
+.server-position-warning.show {
+    display: block;
 }

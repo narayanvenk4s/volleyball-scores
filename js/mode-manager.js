@@ -7,7 +7,7 @@ function enterViewerMode() {
     document.body.classList.add("viewer-mode");
     document.getElementById("loginOverlay").style.display = "none";
     document.getElementById("switchModeBtn").textContent = "Scorer Mode";
-    showModeBanner("viewer", "👁 Viewer Mode — Live scores update automatically");
+    showModeBanner("viewer", "");
     rebuildAllMatchUI();
 }
 
@@ -19,7 +19,7 @@ function attemptScorerLogin() {
         document.getElementById("loginOverlay").style.display = "none";
         document.getElementById("loginError").style.display = "none";
         document.getElementById("switchModeBtn").textContent = "← Exit Scorer";
-        showModeBanner("scorer", "✏️ Scorer Mode — Changes sync live to all viewers");
+        showModeBanner("scorer", "");
         rebuildAllMatchUI();
     } else {
         document.getElementById("loginError").style.display = "block";
@@ -42,9 +42,10 @@ function closeLoginOverlay() {
 
 function showModeBanner(mode, text) {
     var el = document.getElementById("modeBanner");
+    if (!el) return;
     el.className = "mode-banner " + mode;
-    el.textContent = text;
-    el.style.display = "block";
+    el.textContent = text || "";
+    el.style.display = "none";
 }
 
 

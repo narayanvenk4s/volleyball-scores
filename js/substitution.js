@@ -44,22 +44,44 @@ function substitutePlayer(matchId, teamKey, subName) {
     // Clear pending selection
     if (teamKey === "A") m.pendingSubA = -1; else m.pendingSubB = -1;
 
-    // Log
+    // Log (and collapse immediate reversal before next rally)
     var time = new Date().toLocaleTimeString();
     var arr = (teamKey === "A") ? m.subsA : m.subsB;
     if (!arr) { arr = []; if (teamKey === "A") m.subsA = arr; else m.subsB = arr; }
-    arr.push({ time: time, playerIn: subName, playerOut: playerOut, scoreA: m.scoreA, scoreB: m.scoreB, set: m.currentSet || 1 });
-    var logDiv = document.getElementById("subLog_" + matchId + "_" + teamKey);
-    if (logDiv) {
-        var entry = document.createElement("div");
-        entry.textContent = "• " + playerOut + " ⇄ " + subName + "  (Set " + (m.currentSet || 1) + "  " + m.scoreA + "–" + m.scoreB + "  " + time + ")";
-        logDiv.appendChild(entry);
+    if (!m.serviceLog) m.serviceLog = [];
+
+    var pendingKey = teamKey === "A" ? "pendingSubLogA" : "pendingSubLogB";
+    var pending = m[pendingKey];
+    var isImmediateReverse = pending && pending.playerIn === playerOut && pending.playerOut === subName;
+
+    if (isImmediateReverse) {
+        if (arr.length) arr.pop();
+        m.serviceLog = m.serviceLog.filter(function (e) { return e.id !== pending.id; });
+        m[pendingKey] = null;
+    } else {
+        var subEntry = { time: time, playerIn: subName, playerOut: playerOut, scoreA: m.scoreA, scoreB: m.scoreB, set: m.currentSet || 1 };
+        arr.push(subEntry);
+        var subLogId = "sub_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        m.serviceLog.push({
+            id: subLogId,
+            eventType: "sub",
+            teamKey: teamKey,
+            playerIn: subName,
+            playerOut: playerOut,
+            set: m.currentSet || 1,
+            scoreA: m.scoreA,
+            scoreB: m.scoreB,
+            time: time,
+            rally: m.rallyCounter
+        });
+        m[pendingKey] = { id: subLogId, playerIn: subName, playerOut: playerOut };
     }
 
     renderRotation(matchId, teamKey);
     updateSubUI(matchId, teamKey);
     renderServerButtons(matchId);
     updateViewerBenchUI(matchId);
+    renderServiceLogTable(matchId);
     saveToFirebase();
 }
 

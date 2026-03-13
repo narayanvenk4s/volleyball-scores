@@ -66,16 +66,23 @@ function renderServiceLogTable(matchId) {
     function teamLabel(teamKey) {
         if (!teamKey) return "";
         var name = teamKey === "A" ? teams[m.team1Index].name : teams[m.team2Index].name;
-        return name.length > 6 ? name.slice(0, 3) : name;
+        return name;
     }
 
-    var html = "<table><thead><tr><th>Rally</th><th>Time</th><th>Server</th><th>Scorer</th><th>Score</th></tr></thead><tbody>";
+    var html = "<table><thead><tr><th>Event</th><th>Rally</th><th>Time</th><th>Server</th><th>Scorer</th><th>Details</th><th>Score</th></tr></thead><tbody>";
     log.forEach(function (e) {
+        var isSub = e.eventType === "sub";
+        var eventLabel = isSub ? "Sub" : "Rally";
+        var details = isSub
+            ? ((e.teamKey === "A" ? teams[m.team1Index].name : teams[m.team2Index].name) + ": " + (e.playerOut || "") + " ⇄ " + (e.playerIn || ""))
+            : "";
         html += "<tr>" +
+            "<td>" + eventLabel + "</td>" +
             "<td>" + (e.rally || "") + "</td>" +
             "<td>" + (e.time || "") + "</td>" +
-            "<td>" + teamLabel(e.serverTeam) + (e.serverPlayer ? " (" + e.serverPlayer + ")" : "") + "</td>" +
-            "<td>" + teamLabel(e.scoringTeam) + "</td>" +
+            "<td>" + (isSub ? "—" : (teamLabel(e.serverTeam) + (e.serverPlayer ? " (" + e.serverPlayer + ")" : ""))) + "</td>" +
+            "<td>" + (isSub ? "—" : teamLabel(e.scoringTeam)) + "</td>" +
+            "<td>" + details + "</td>" +
             "<td>" + (e.scoreA != null ? e.scoreA : "") + " – " + (e.scoreB != null ? e.scoreB : "") + "</td>" +
             "</tr>";
     });

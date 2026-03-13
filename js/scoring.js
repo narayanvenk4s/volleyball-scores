@@ -81,7 +81,6 @@ function checkSetComplete(matchId) {
     m.currentSet = (m.currentSet || 1) + 1;
     m.scoreA = 0;
     m.scoreB = 0;
-    m.rallyHistory = [];
     m.serverTeam = null;
     m.serverPlayerA = null;
     m.serverPlayerB = null;
@@ -106,6 +105,8 @@ function undoLastPoint(matchId, teamKey) {
     m.serverPlayerA = last.prevServerPlayerA;
     m.serverPlayerB = last.prevServerPlayerB;
     m.rallyCounter = last.prevRallyCounter;
+    m.pendingSubLogA = null;
+    m.pendingSubLogB = null;
     if (m.serviceLog && m.serviceLog.length) m.serviceLog.pop();
     if (last.prevCurrentSet !== undefined) m.currentSet = last.prevCurrentSet;
     if (last.prevSetsWonA !== undefined) m.setsWonA = last.prevSetsWonA;

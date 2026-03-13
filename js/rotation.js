@@ -126,6 +126,8 @@ function renderRotation(matchId, teamKey) {
         container.innerHTML = rotRow(1, 2) + rotRow(6, 3) + rotRow(5, 4);
     }
 
+    updateServerWarnings(matchId);
+
     // Attach touch listeners after rendering.
     // passive:false on touchmove/touchend so preventDefault() can block scroll and suppress click.
     if (isScorer) {
