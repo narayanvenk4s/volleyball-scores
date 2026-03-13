@@ -14,6 +14,7 @@ function createEmptyMatchState(matchId, t1, t2) {
         serverTeam: null,
         serverPlayerA: null,
         serverPlayerB: null,
+        nextServerTeam: null,
         serverReminder: "",
         serverCooldownA: {},
         serverCooldownB: {},
@@ -46,6 +47,7 @@ function ensureSetState(matchId) {
     if (!m.sets) m.sets = [];
     if (m.matchComplete === undefined) m.matchComplete = false;
     if (m.serverReminder === undefined) m.serverReminder = "";
+    if (m.nextServerTeam === undefined) m.nextServerTeam = null;
     if (!m.serverCooldownA) m.serverCooldownA = {};
     if (!m.serverCooldownB) m.serverCooldownB = {};
 }

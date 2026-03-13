@@ -16,8 +16,11 @@ function setServer(matchId, teamKey, playerName) {
     }
 
     m.serverTeam = teamKey;
+    m.serverPlayerA = null;
+    m.serverPlayerB = null;
     if (teamKey === "A") m.serverPlayerA = playerName;
     else m.serverPlayerB = playerName;
+    m.nextServerTeam = null;
 
     applyServerSelectionCooldown(matchId, teamKey, playerName);
     m.serverReminder = "";
@@ -108,13 +111,19 @@ function renderServerButtons(matchId) {
     if (containerA) {
         containerA.innerHTML = playersA.map(function (p) {
             var sid = "srv_" + matchId + "_A_" + safeId(p);
-            return "<span id='" + sid + "' class='player-btn' onclick=\"setServer('" + matchId + "','A','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            var remaining = (m.serverCooldownA || {})[p] || 0;
+            var title = remaining > 0 ? " title='Wait " + remaining + " change(s)'" : "";
+            var classes = "player-btn" + (remaining > 0 ? " cooling-down" : "");
+            return "<span id='" + sid + "' class='" + classes + "'" + title + " onclick=\"setServer('" + matchId + "','A','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
         }).join("");
     }
     if (containerB) {
         containerB.innerHTML = playersB.map(function (p) {
             var sid = "srv_" + matchId + "_B_" + safeId(p);
-            return "<span id='" + sid + "' class='player-btn' onclick=\"setServer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
+            var remaining = (m.serverCooldownB || {})[p] || 0;
+            var title = remaining > 0 ? " title='Wait " + remaining + " change(s)'" : "";
+            var classes = "player-btn" + (remaining > 0 ? " cooling-down" : "");
+            return "<span id='" + sid + "' class='" + classes + "'" + title + " onclick=\"setServer('" + matchId + "','B','" + escJs(p) + "')\">" + escHtml(p) + "</span>";
         }).join("");
     }
     highlightServerButton(matchId);
@@ -131,11 +140,11 @@ function highlightServerButton(matchId) {
 
     pA.forEach(function (p) {
         var el = document.getElementById("srv_" + matchId + "_A_" + safeId(p));
-        if (el) el.classList.remove("server-highlight");
+        if (el) el.classList.remove("server-highlight", "next-server-candidate");
     });
     pB.forEach(function (p) {
         var el = document.getElementById("srv_" + matchId + "_B_" + safeId(p));
-        if (el) el.classList.remove("server-highlight");
+        if (el) el.classList.remove("server-highlight", "next-server-candidate");
     });
 
     if (m.serverPlayerA) {
@@ -145,6 +154,17 @@ function highlightServerButton(matchId) {
     if (m.serverPlayerB) {
         var elB = document.getElementById("srv_" + matchId + "_B_" + safeId(m.serverPlayerB));
         if (elB) elB.classList.add("server-highlight");
+    }
+
+    var pendingTeam = m.nextServerTeam;
+    if (pendingTeam && !((pendingTeam === "A" && m.serverPlayerA) || (pendingTeam === "B" && m.serverPlayerB))) {
+        var pendingPlayers = pendingTeam === "A" ? pA : pB;
+        var cooldowns = pendingTeam === "A" ? (m.serverCooldownA || {}) : (m.serverCooldownB || {});
+        pendingPlayers.forEach(function (p) {
+            if ((cooldowns[p] || 0) > 0) return;
+            var el = document.getElementById("srv_" + matchId + "_" + pendingTeam + "_" + safeId(p));
+            if (el) el.classList.add("next-server-candidate");
+        });
     }
 }
 
