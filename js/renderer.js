@@ -87,54 +87,55 @@ function buildMatchCardHTML(matchId, t1Index, t2Index, isFinal) {
         "    <div id='setHistory_" + matchId + "' class='set-history'></div>" +
         "  </div>" +
 
-        // Combined court view: both teams facing the net, scores at the net line
+        // Combined court view: horizontal layout — Team A on LEFT, vertical NET, Team B on RIGHT
         "  <div class='court-view'>" +
+        "    <div class='court-main'>" +
 
-        // Top half — Team A (front row nearest net, rear row at top)
-        "    <div class='court-half court-top' id='courtHalfA_" + matchId + "'>" +
-        "      <div class='court-half-inner'>" +
-        "        <div class='court-team-side'>" + escHtml(t1.name) + "</div>" +
-        "        <div class='court-half-grid'>" +
-        "          <div id='rotCourt_" + matchId + "_A' class='rotation-court'></div>" +
-        "          <div class='court-half-btns scorer-only'>" +
-        "            <button class='btn-rotate' onclick=\"manualRotate('" + matchId + "','A')\">↻ Rotate</button>" +
-        "            <button class='btn-rotate' onclick=\"undoLastPoint('" + matchId + "','A')\">↺ Undo " + escHtml(t1.name) + "</button>" +
+        // LEFT: Team A
+        "      <div class='court-half court-left' id='courtHalfA_" + matchId + "'>" +
+        "        <div class='court-half-inner'>" +
+        "          <div class='court-team-side'>" + escHtml(t1.name) + "</div>" +
+        "          <div class='court-half-grid'>" +
+        "            <div id='rotCourt_" + matchId + "_A' class='rotation-court'></div>" +
+        "            <div class='court-half-btns scorer-only'>" +
+        "              <button class='btn-rotate' onclick=\"manualRotate('" + matchId + "','A')\">↻ Rotate</button>" +
+        "              <button class='btn-rotate' onclick=\"undoLastPoint('" + matchId + "','A')\">↺ Undo " + escHtml(t1.name) + "</button>" +
+        "            </div>" +
+        "          </div>" +
+        "          <div class='court-net-score'>" +
+        "            <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',1)\">+</button>" +
+        "            <span id='score_" + matchId + "_A' class='net-score-num'>0</span>" +
+        "            <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',-1)\">−</button>" +
         "          </div>" +
         "        </div>" +
         "      </div>" +
-        "    </div>" +
 
-        // Net row — scores on left (A) and right (B), set info in centre
-        "    <div class='court-net-row' id='courtNet_" + matchId + "'>" +
-        "      <div class='court-net-score court-net-left'>" +
-        "        <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',-1)\">−</button>" +
-        "        <span id='score_" + matchId + "_A' class='net-score-num'>0</span>" +
-        "        <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','A',1)\">+</button>" +
-        "      </div>" +
-        "      <div class='court-net-divider'>" +
+        // VERTICAL NET — label and set indicator
+        "      <div class='court-net-col' id='courtNet_" + matchId + "'>" +
         "        <span class='net-label'>NET</span>" +
         "        <span id='setIndicator_" + matchId + "' class='net-set-label'>Set 1</span>" +
         "      </div>" +
-        "      <div class='court-net-score court-net-right'>" +
-        "        <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',-1)\">−</button>" +
-        "        <span id='score_" + matchId + "_B' class='net-score-num'>0</span>" +
-        "        <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',1)\">+</button>" +
-        "      </div>" +
-        "    </div>" +
 
-        // Bottom half — Team B (front row nearest net, rear row at bottom)
-        "    <div class='court-half court-bottom' id='courtHalfB_" + matchId + "'>" +
-        "      <div class='court-half-inner'>" +
-        "        <div class='court-team-side'>" + escHtml(t2.name) + "</div>" +
-        "        <div class='court-half-grid'>" +
-        "          <div id='rotCourt_" + matchId + "_B' class='rotation-court'></div>" +
-        "          <div class='court-half-btns scorer-only'>" +
-        "            <button class='btn-rotate' onclick=\"manualRotate('" + matchId + "','B')\">↻ Rotate</button>" +
-        "            <button class='btn-rotate' onclick=\"undoLastPoint('" + matchId + "','B')\">↺ Undo " + escHtml(t2.name) + "</button>" +
+        // RIGHT: Team B
+        "      <div class='court-half court-right' id='courtHalfB_" + matchId + "'>" +
+        "        <div class='court-half-inner'>" +
+        "          <div class='court-net-score'>" +
+        "            <button class='score-btn scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',1)\">+</button>" +
+        "            <span id='score_" + matchId + "_B' class='net-score-num'>0</span>" +
+        "            <button class='score-btn minus scorer-only'" + disabledAttr + " onclick=\"changeScore('" + matchId + "','B',-1)\">−</button>" +
         "          </div>" +
+        "          <div class='court-half-grid'>" +
+        "            <div id='rotCourt_" + matchId + "_B' class='rotation-court'></div>" +
+        "            <div class='court-half-btns scorer-only'>" +
+        "              <button class='btn-rotate' onclick=\"manualRotate('" + matchId + "','B')\">↻ Rotate</button>" +
+        "              <button class='btn-rotate' onclick=\"undoLastPoint('" + matchId + "','B')\">↺ Undo " + escHtml(t2.name) + "</button>" +
+        "            </div>" +
+        "          </div>" +
+        "          <div class='court-team-side'>" + escHtml(t2.name) + "</div>" +
         "        </div>" +
         "      </div>" +
-        "    </div>" +
+
+        "    </div>" + // close court-main
 
         // Swap button (scorer only)
         "    <div class='court-footer scorer-only'>" +

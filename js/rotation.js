@@ -14,24 +14,24 @@ function swapCourtView(matchId) {
     var halfB = document.getElementById('courtHalfB_' + matchId);
     var netEl = document.getElementById('courtNet_' + matchId);
     if (!halfA || !halfB || !netEl) return;
-    var courtView = netEl.parentElement;
+    var courtView = netEl.parentElement; // .court-main
 
     // Remove both halves, then re-insert in the desired order around the net
     courtView.removeChild(halfA);
     courtView.removeChild(halfB);
 
     if (swapped) {
-        // B on top (before net), A on bottom (after net)
+        // B on left (before net), A on right (after net)
         courtView.insertBefore(halfB, netEl);
         courtView.insertBefore(halfA, netEl.nextSibling);
-        halfB.classList.remove('court-bottom'); halfB.classList.add('court-top');
-        halfA.classList.remove('court-top');    halfA.classList.add('court-bottom');
+        halfB.classList.remove('court-right'); halfB.classList.add('court-left');
+        halfA.classList.remove('court-left');  halfA.classList.add('court-right');
     } else {
-        // A on top (before net), B on bottom (after net)
+        // A on left (before net), B on right (after net)
         courtView.insertBefore(halfA, netEl);
         courtView.insertBefore(halfB, netEl.nextSibling);
-        halfA.classList.remove('court-bottom'); halfA.classList.add('court-top');
-        halfB.classList.remove('court-top');    halfB.classList.add('court-bottom');
+        halfA.classList.remove('court-right'); halfA.classList.add('court-left');
+        halfB.classList.remove('court-left');  halfB.classList.add('court-right');
     }
 }
 
