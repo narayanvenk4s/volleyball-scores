@@ -23,6 +23,7 @@ function getStandingsData() {
     for (var i = 0; i < n; i++) data.push({ idx: i, name: teams[i].name, wins: wins[i], sw: sw[i], sl: sl[i] });
     data.sort(function (a, b) {
         if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.sl !== b.sl) return a.sl - b.sl;
         return (b.sw - b.sl) - (a.sw - a.sl);
     });
     return data;
@@ -32,16 +33,16 @@ function updateStandings() {
     var table = document.getElementById("standingsTable");
     if (!table) return;
     var data = getStandingsData();
-    var html = "<tr><th>#</th><th>Team</th><th>MW</th><th>SW</th><th>SL</th><th>Diff</th></tr>";
+    var html = "<tr><th>#</th><th>Team</th><th>MW</th><th>SL</th><th>Diff</th><th>SW</th></tr>";
     data.forEach(function (row, idx) {
         var diff = row.sw - row.sl;
         html += "<tr>" +
             "<td>" + (idx + 1) + "</td>" +
             "<td>" + escHtml(row.name) + "</td>" +
             "<td style='font-weight:700;'>" + row.wins + "</td>" +
-            "<td>" + row.sw + "</td>" +
             "<td>" + row.sl + "</td>" +
             "<td style='color:" + (diff >= 0 ? "var(--green)" : "var(--red)") + ";font-weight:600;'>" + (diff >= 0 ? "+" : "") + diff + "</td>" +
+            "<td>" + row.sw + "</td>" +
             "</tr>";
     });
     table.innerHTML = html;

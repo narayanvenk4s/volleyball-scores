@@ -37,6 +37,7 @@ function changeScore(matchId, teamKey, delta) {
             prevServerTeam: m.serverTeam,
             prevServerPlayerA: m.serverPlayerA,
             prevServerPlayerB: m.serverPlayerB,
+            prevNextServerTeam: m.nextServerTeam || null,
             prevServerReminder: m.serverReminder || "",
             prevServerCooldownA: JSON.parse(JSON.stringify(m.serverCooldownA || {})),
             prevServerCooldownB: JSON.parse(JSON.stringify(m.serverCooldownB || {})),
@@ -61,12 +62,13 @@ function changeScore(matchId, teamKey, delta) {
             }
 
             m.serverTeam = teamKey;
-            if (teamKey === "A") m.serverPlayerA = null;
-            else m.serverPlayerB = null;
+            m.serverPlayerA = null;
+            m.serverPlayerB = null;
 
             if (serverRotationEnabled) {
                 var servingTeamName = teamKey === "A" ? teams[m.team1Index].name : teams[m.team2Index].name;
                 m.serverReminder = "Serve broken. Pick a new server for " + servingTeamName + ".";
+                m.nextServerTeam = teamKey;
             } else {
                 var players = teamKey === "A"
                     ? (m.activePlayersA || teams[m.team1Index].players || [])
@@ -77,6 +79,7 @@ function changeScore(matchId, teamKey, delta) {
                 if (teamKey === "A") m.serverPlayerA = fallbackServer;
                 else m.serverPlayerB = fallbackServer;
                 m.serverReminder = "";
+                m.nextServerTeam = null;
             }
         }
         checkSetComplete(matchId);
@@ -123,6 +126,7 @@ function checkSetComplete(matchId) {
     m.serverTeam = null;
     m.serverPlayerA = null;
     m.serverPlayerB = null;
+    m.nextServerTeam = null;
     m.serverReminder = "";
 }
 
@@ -140,6 +144,7 @@ function undoLastPoint(matchId) {
     m.serverTeam = last.prevServerTeam;
     m.serverPlayerA = last.prevServerPlayerA;
     m.serverPlayerB = last.prevServerPlayerB;
+    m.nextServerTeam = last.prevNextServerTeam || null;
     m.serverReminder = last.prevServerReminder || "";
     m.serverCooldownA = last.prevServerCooldownA || {};
     m.serverCooldownB = last.prevServerCooldownB || {};
