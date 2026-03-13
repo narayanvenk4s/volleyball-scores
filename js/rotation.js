@@ -113,7 +113,7 @@ function renderRotation(matchId, teamKey) {
 
     if (isRight) {
         // Mirrored: front row (2,3,4) on the left side, back row (1,6,5) on the right
-        container.innerHTML = rotRow(2, 1) + rotRow(3, 6) + rotRow(4, 5);
+        container.innerHTML = rotRow(4, 5) + rotRow(3, 6) + rotRow(2, 1);
     } else {
         // Normal: back row (1,6,5) on the left side, front row (2,3,4) on the right
         container.innerHTML = rotRow(1, 2) + rotRow(6, 3) + rotRow(5, 4);
