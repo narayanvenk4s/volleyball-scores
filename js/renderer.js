@@ -44,12 +44,10 @@ function buildMatchSummaryHTML(matchId, t1Index, t2Index, isFinal) {
         "    <div class='compact-match-title'>" + title + "</div>" +
         "    <div class='compact-teams'>" +
         "      <div class='compact-team-row'>" +
-        "        <span class='compact-team-name'>" + escHtml(t1.name) + "</span>" +
-        (t1Won ? "<span class='compact-winner-tick'>✓</span>" : "") +
+        "        <span class='compact-team-name'>" + escHtml(t1.name) + (t1Won ? " <span class='compact-winner-tick'>✓</span>" : "") + "</span>" +
         "      </div>" +
         "      <div class='compact-team-row'>" +
-        "        <span class='compact-team-name'>" + escHtml(t2.name) + "</span>" +
-        (t2Won ? "<span class='compact-winner-tick'>✓</span>" : "") +
+        "        <span class='compact-team-name'>" + escHtml(t2.name) + (t2Won ? " <span class='compact-winner-tick'>✓</span>" : "") + "</span>" +
         "      </div>" +
         "    </div>" +
         "    <div class='compact-set-history'>" + allSetScores + "</div>" +
