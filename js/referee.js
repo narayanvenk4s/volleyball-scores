@@ -115,10 +115,13 @@ function renderRefereeView() {
         return (teamKey === "A" ? m.availableSubsA : m.availableSubsB) || ((teams[idx] && teams[idx].subs) || []);
     }
 
+    var currentSet = m.currentSet || 1;
+
     function teamServerHistory(teamKey) {
         var teamRows = [];
         var lastServer = null;
         (m.serviceLog || []).forEach(function (evt) {
+            if ((evt.set || 1) !== currentSet) return;
             if (!evt.serverTeam || !evt.serverPlayer || evt.serverTeam !== teamKey) return;
             if (lastServer === evt.serverPlayer) return;
             lastServer = evt.serverPlayer;
@@ -129,7 +132,7 @@ function renderRefereeView() {
 
     function teamSubSummary(teamKey) {
         return (m.serviceLog || []).filter(function (evt) {
-            return evt.eventType === "sub" && evt.teamKey === teamKey;
+            return evt.eventType === "sub" && evt.teamKey === teamKey && (evt.set || 1) === currentSet;
         });
     }
 
@@ -172,10 +175,13 @@ function renderRefereeView() {
     var html = "" +
         "<div class='ref-scoreboard'>" +
         "<div class='ref-team-name'>" + escHtml(tName(leftKey)) + "</div>" +
+        "<div class='ref-score-set-label'>" + (m.matchComplete ? "Final" : ("Set " + currentSet)) + "</div>" +
         "<div class='ref-team-name'>" + escHtml(tName(rightKey)) + "</div>" +
         "<div class='ref-score'>" + score(leftKey) + "</div>" +
+        "<div class='ref-score-set-label ref-score-set-label--mid'>" + (m.matchComplete ? "Final" : ("Set " + currentSet)) + "</div>" +
         "<div class='ref-score'>" + score(rightKey) + "</div>" +
         "<div class='ref-sets'>Sets: " + sets(leftKey) + "</div>" +
+        "<div class='ref-score-set-label'>" + ((m.scoreA >= 14 && m.scoreB >= 14) ? "Win by 2" : "Race to 15") + "</div>" +
         "<div class='ref-sets'>Sets: " + sets(rightKey) + "</div>" +
         "</div>" +
         "<div class='ref-server-current'>Current Server: " + escHtml(currentServer) + "</div>" +
